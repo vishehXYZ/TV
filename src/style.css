@@ -1,0 +1,752 @@
+:root {
+  color-scheme: dark;
+  --panel-bg: rgba(14, 14, 20, 0.72);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --text-bright: rgba(255, 255, 255, 0.96);
+  --text-dim: rgba(255, 255, 255, 0.58);
+  --accent: linear-gradient(135deg, #caa24a, #e8d197);
+  --accent-solid: #d9b666;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05050a;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  /* 100vh on mobile browsers includes the space behind the collapsible address bar, so
+     bottom-anchored content (the control bar, Record/Sound buttons) can end up positioned below the
+     actually-visible/tappable area. 100dvh tracks the real visible viewport instead — supported
+     browsers override the line above, older ones just keep the vh fallback. */
+  height: 100dvh;
+}
+
+#scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Small always-visible preview so you can see the camera/tracking is
+   actually working, independent of whatever background source (if any)
+   is selected in the control bar. Self View in the control bar is a
+   separate, bigger, opacity-adjustable option for using the feed as the
+   actual visual background — this is just a framing/confirmation thumbnail. */
+#webcam {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transform: scaleX(-1);
+  z-index: 2;
+}
+
+#ui-root {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+}
+
+#status {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.start-button {
+  background: linear-gradient(135deg, #caa24a, #e8d197);
+  color: #1a1408;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.start-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Full-screen landing overlay — first thing shown, keeps the live-performance UI hidden until the
+   user actually opts in to the camera. */
+.start-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at center, #0d0d16 0%, #05050a 70%);
+}
+
+.start-screen-title {
+  font-size: clamp(28px, 6.5vw, 60px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  max-width: 92vw;
+  color: var(--text-bright);
+  text-shadow: 0 0 40px rgba(217, 182, 102, 0.35);
+}
+
+.start-screen-tagline {
+  margin: 0;
+  max-width: 560px;
+  font-size: clamp(14px, 2.6vw, 18px);
+  color: var(--text-bright);
+  opacity: 0.85;
+}
+
+.start-screen-instructions {
+  margin: 0;
+  max-width: 560px;
+  font-size: clamp(11.5px, 2vw, 13px);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.start-screen-button {
+  margin-top: 8px;
+  background: var(--accent);
+  color: #1a1408;
+  border: none;
+  border-radius: 999px;
+  padding: 16px 40px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(217, 182, 102, 0.3);
+}
+
+.start-screen-button:hover {
+  filter: brightness(1.06);
+}
+
+.start-screen-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Bigger and more visible than a typical fine-print privacy line — this is a deliberate reassurance,
+   not an afterthought. */
+.start-screen-privacy {
+  margin-top: 4px;
+  max-width: 480px;
+  font-size: clamp(12.5px, 2.2vw, 14px);
+  color: var(--text-dim);
+}
+
+/* Positioned directly under the webcam preview (12px + 120px height + 8px gap) so it's obvious
+   and easy to find rather than a small icon tucked elsewhere. */
+.camera-toggle-button {
+  position: absolute;
+  top: 140px;
+  left: 12px;
+  width: 160px;
+  z-index: 3;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  color: var(--text-bright);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease;
+}
+
+.camera-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Paused = sound is now the sole trigger, so it reads as "active/engaged" using the same
+   gold-accent convention as an active mode/style button elsewhere in the UI. */
+.camera-toggle-button.paused {
+  background: var(--accent);
+  color: #1a1408;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.camera-toggle-button.paused:hover {
+  filter: brightness(1.08);
+}
+
+/* A clear, always-visible shortcut for Self View right in the webcam/pause-button cluster — the same
+   toggle also lives in the Background section of the bottom control bar, this just makes it obvious
+   without having to go looking for it. Sits directly under Pause Camera Tracking. */
+.self-view-toggle-button {
+  position: absolute;
+  top: 182px;
+  left: 12px;
+  width: 160px;
+  z-index: 3;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  color: var(--text-bright);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease;
+}
+
+.self-view-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.self-view-toggle-button.active {
+  background: var(--accent);
+  color: #1a1408;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* Sits directly under the Self View shortcut — only actually visible once connected and only if more
+   than one camera is available (see CameraPicker.ts), so it doesn't clutter the common
+   single-camera-laptop case. */
+.camera-picker {
+  position: absolute;
+  top: 224px;
+  left: 12px;
+  width: 160px;
+  z-index: 3;
+}
+
+.camera-picker-select {
+  width: 100%;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  color: var(--text-bright);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 7px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mode-switcher-wrapper {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: min(97vw, 1180px);
+}
+
+.mode-switcher {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  gap: 4px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  padding: 7px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mode-button {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-bright);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.mode-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-button.active {
+  background: var(--accent);
+  color: #1a1408;
+  border-color: transparent;
+}
+
+/* Options row for whichever mode is selected — only shown when that mode
+   has more than one style, so every option is visible and one click away
+   instead of hidden behind repeated clicks on the same button. */
+.mode-style-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  padding: 5px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.style-pill {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.style-pill:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-bright);
+}
+
+.style-pill.active {
+  background: var(--accent);
+  color: #1a1408;
+}
+
+/* Each section (Background, Backdrop, Sound, Record) renders as its own
+   distinct rounded card with a solid-pill header label above a button row —
+   reads as clearly separated groups rather than one long strip with thin
+   divider lines. */
+.control-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  max-width: min(98vw, 1180px);
+}
+
+.control-bar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 9px 8px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.recording-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.record-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.record-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e0435a;
+  transition:
+    border-radius 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease;
+}
+
+.record-button.recording .record-dot {
+  border-radius: 3px;
+  width: 12px;
+  height: 12px;
+}
+
+.record-button.processing {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.record-timer {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  min-width: 34px;
+}
+
+.png-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.png-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.record-progress {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  max-width: 220px;
+}
+
+.background-controls,
+.sound-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.background-label {
+  display: inline-block;
+  color: #1a1408;
+  background: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.background-button {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-bright);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.background-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.background-button.active {
+  background: var(--accent);
+  color: #1a1408;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* Self View opacity slider */
+.opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.opacity-row label {
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.opacity-row input[type='range'] {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--accent-solid);
+}
+
+/* Tweakpane legibility pass — default labels/values render quite dim/small;
+   bump contrast and size so option text is easy to read at a glance. */
+#ui-root .tp-dfwv {
+  font-size: 12.5px;
+}
+
+#ui-root .tp-lblv_l,
+#ui-root .tp-fldv_t {
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-weight: 500;
+}
+
+#ui-root .tp-rotv_b {
+  font-weight: 600;
+}
+
+/* Settings toggle — only shown/used on mobile (see media query below), where the Tweakpane panel
+   becomes a full-screen overlay instead of a permanent top-right fixture, so it doesn't collide with
+   everything else on a small screen. */
+.settings-toggle-button {
+  display: none;
+}
+
+/* ================= Mobile layout ================= */
+/* Below this width, five independently-positioned panels (webcam, pause button, mode switcher,
+   control bar, Tweakpane) can no longer coexist as floating corners without overlapping — this
+   restacks everything into a layout that fits, and turns the detailed parameter panel into an
+   on-demand overlay since it's a power-user tool, not something you need visible to use the app. */
+@media (max-width: 860px) {
+  /* Dev-facing FPS counter, not essential on a phone — the bottom-left corner is already claimed by
+     the control bar on small screens, so avoid the overlap risk entirely rather than chase a position. */
+  .stats-panel {
+    display: none;
+  }
+
+  #webcam {
+    width: 84px;
+    height: 63px;
+    top: 8px;
+    left: 8px;
+    border-radius: 6px;
+  }
+
+  .camera-toggle-button {
+    top: 75px;
+    left: 8px;
+    width: 84px;
+    padding: 6px 4px;
+    font-size: 10px;
+    border-radius: 8px;
+  }
+
+  .self-view-toggle-button {
+    top: 109px;
+    left: 8px;
+    width: 84px;
+    padding: 6px 4px;
+    font-size: 10px;
+    border-radius: 8px;
+  }
+
+  .camera-picker {
+    top: 143px;
+    left: 8px;
+    width: 84px;
+  }
+
+  .camera-picker-select {
+    padding: 5px 4px;
+    font-size: 9.5px;
+    border-radius: 8px;
+  }
+
+  .mode-switcher-wrapper {
+    top: 8px;
+    left: 100px;
+    /* Extra clearance on the right so wrapped mode buttons never sit under the settings gear button
+       (38px wide + 8px gap from the edge). */
+    right: 54px;
+    transform: none;
+    max-width: none;
+    width: auto;
+  }
+
+  /* Wraps to multiple rows instead of a single horizontally-scrolling row — every mode category
+     stays visible and reachable at a glance instead of hidden off-screen. */
+  .mode-switcher {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding: 5px;
+    border-radius: 12px;
+  }
+
+  .mode-button {
+    padding: 7px 9px;
+    font-size: 11.5px;
+  }
+
+  .style-pill {
+    padding: 6px 11px;
+    font-size: 10.5px;
+  }
+
+  .control-bar {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    transform: none;
+    max-width: none;
+    justify-content: flex-start;
+    max-height: 38vh;
+    overflow-y: auto;
+  }
+
+  .control-bar-section {
+    padding: 6px 8px 7px;
+  }
+
+  #status {
+    bottom: auto;
+    top: 8px;
+    left: 100px;
+    right: 8px;
+    text-align: right;
+  }
+
+  /* The detailed parameter panel (palette/pattern sliders) is a power-user tool that doesn't need to
+     be visible by default on a small screen — it becomes a full-screen overlay toggled by a small gear
+     button, instead of a permanent top-right fixture that would otherwise collide with everything else. */
+  .settings-toggle-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 4;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--panel-border);
+    color: var(--text-bright);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  #ui-root {
+    display: none;
+    position: fixed;
+    inset: 0;
+    top: auto;
+    right: auto;
+    z-index: 6;
+    background: rgba(6, 6, 10, 0.96);
+    padding: 16px;
+    padding-top: 56px;
+    overflow-y: auto;
+  }
+
+  #ui-root.open {
+    display: block;
+  }
+
+  #ui-root .tp-dfwv {
+    width: 100% !important;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* ================= Presentation mode (fullscreen, hide all UI) ================= */
+/* For projector/wall performance — press F or the corner toggle button to hide every panel/menu and
+   show only the generative visual. Works alongside the OS Fullscreen API request in PresentationMode.ts;
+   this class-based hide works even on platforms that deny the Fullscreen API (e.g. iOS Safari), and
+   also applies during ordinary windowed use if someone just wants a clean, uncluttered view. */
+.presentation-toggle-button {
+  position: absolute;
+  top: 8px;
+  right: 54px;
+  z-index: 4;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--panel-border);
+  color: var(--text-bright);
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.presentation-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.presentation-mode .mode-switcher-wrapper,
+body.presentation-mode .control-bar,
+body.presentation-mode #webcam,
+body.presentation-mode .camera-toggle-button,
+body.presentation-mode .self-view-toggle-button,
+body.presentation-mode .camera-picker,
+body.presentation-mode #ui-root,
+body.presentation-mode .settings-toggle-button,
+body.presentation-mode .presentation-toggle-button,
+body.presentation-mode #status,
+body.presentation-mode .stats-panel {
+  display: none !important;
+}
+
+.sound-controls button { overflow-wrap:anywhere; max-width:280px; }

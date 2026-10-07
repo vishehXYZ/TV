@@ -96,6 +96,13 @@ export class ControlPanel {
     chaosFolder.addBinding(appState.chaos, 'glitch', { min: 0, max: 1, step: 0.05 });
     this.modeFolders.push({ folder: chaosFolder, modes: ['scribbleGlitch', 'numberGlitch', 'chaosMix'] });
 
+    const bodyFolder = this.pane.addFolder({ title: 'Body FX' });
+    bodyFolder.addBinding(appState.bodyFx, 'usePalette', { label: 'Use selected palette' });
+    bodyFolder.addBinding(appState.bodyFx, 'speed', { min: 0.2, max: 3, step: 0.1 });
+    bodyFolder.addBinding(appState.bodyFx, 'intensity', { min: 0.3, max: 2, step: 0.1 });
+    bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
+    this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism'] });
+
     const glowFolder = this.pane.addFolder({ title: 'Glow (all modes)' });
     glowFolder.addBinding(bloomPass, 'strength', { min: 0, max: 3, step: 0.05, label: 'intensity' });
     glowFolder.addBinding(bloomPass, 'radius', { min: 0, max: 1, step: 0.01, label: 'spread' });

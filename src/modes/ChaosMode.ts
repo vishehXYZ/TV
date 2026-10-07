@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { SceneManager } from '../core/SceneManager';
 import type { AppState } from '../core/AppState';
+import { SegmentationMaskTexture } from '../tracking/SegmentationMaskTexture';
+import vertexShader from '../generators/chroma/chroma.vert.glsl';
+import maskSample from '../generators/shared/maskSample.glsl';
 import type { PoseTracker } from '../tracking/PoseTracker';
 
 /** A bounded canvas texture: moving ink, digits, sliced bands and geometric interruptions. */
@@ -10,6 +13,8 @@ export class ChaosMode {
   private texture: THREE.CanvasTexture;
   private mesh: THREE.Mesh;
   private lastFrame = -Infinity;
+  private mask = new SegmentationMaskTexture();
+  private material: THREE.ShaderMaterial;
   private scene: SceneManager;
   private style: number;
   constructor(scene: SceneManager, style: number) {
@@ -18,7 +23,27 @@ export class ChaosMode {
     this.context = this.canvas.getContext('2d')!;
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
-    const material = new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false });
+    this.material = new THREE.ShaderMaterial({
+      vertexShader, transparent: true, depthWrite: false,
+      uniforms: { uInk: { value: this.texture }, uMask: { value: null }, uMaskResolution: { value: new THREE.Vector2(1,1) }, uAspect: { value: 1 }, uHasMask: { value: 0 } },
+      fragmentShader: `uniform sampler2D uInk; uniform sampler2D uMask; uniform vec2 uMaskResolution;
+      uniform float uAspect; uniform float uHasMask; varying vec2 vStagePos;
+      ${maskSample}
+      void main(){
+        vec2 uv=vec2(vStagePos.x/(2.0*uAspect)+0.5,vStagePos.y*0.5+0.5);
+        vec4 ink=texture2D(uInk,uv);
+        float body=uHasMask>0.5?smoothstep(0.25,0.65,sampleMask(vStagePos)):0.0;
+        float inner=uHasMask>0.5?smoothstep(0.25,0.65,sampleMask(vStagePos+vec2(0.014,0.0)))*smoothstep(0.25,0.65,sampleMask(vStagePos-vec2(0.014,0.0)))*smoothstep(0.25,0.65,sampleMask(vStagePos+vec2(0.0,0.014)))*smoothstep(0.25,0.65,sampleMask(vStagePos-vec2(0.0,0.014))):0.0;
+        float edge=max(0.0,body-inner);
+        float ambient=uHasMask>0.5?0.06:0.55;
+        float a=ink.a*max(body,ambient);
+        float base=body*0.24;
+        vec3 color=mix(vec3(0.045,0.13,0.22),ink.rgb,ink.a);
+        color=mix(color,vec3(0.05,0.85,0.95),edge);
+        gl_FragColor=vec4(color,max(a,max(base,edge*0.85)));
+      }`,
+    });
+    const material = this.material;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     this.mesh.position.z = -0.3; this.mesh.visible = false;
     scene.scene.add(this.mesh);
@@ -26,6 +51,9 @@ export class ChaosMode {
   setVisible(visible: boolean): void { this.mesh.visible = visible; }
   update(tracker: PoseTracker, state: AppState, time: number): void {
     this.mesh.scale.set(this.scene.aspect, 1, 1);
+    const mask = this.mask.update(tracker.state), u = this.material.uniforms;
+    u.uMask!.value = mask; u.uMaskResolution!.value.set(this.mask.width,this.mask.height);
+    u.uAspect!.value = this.scene.aspect; u.uHasMask!.value = mask && tracker.state.hasDetection ? 1 : 0;
     if (time - this.lastFrame < 1 / 24) return;
     this.lastFrame = time;
     const c = this.context, w = this.canvas.width, h = this.canvas.height;

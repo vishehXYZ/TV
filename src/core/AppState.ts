@@ -10,6 +10,18 @@ export interface PalettePreset {
 }
 
 export const PALETTE_PRESETS: PalettePreset[] = [
+  { name: 'White Paper / Black Ink', colors: ['#fafafa', '#c6c6c6', '#808080', '#eeeeee', '#454545'] },
+  { name: 'X-Ray Monochrome', colors: ['#020202', '#fcfcfc', '#202020', '#b9b9b9', '#595959'] },
+  { name: 'Silver Static', colors: ['#06080c', '#303741', '#77818e', '#c7d1dc', '#ffffff'] },
+  { name: 'Paper / Cobalt & Vermilion', colors: ['#071b68', '#123cd6', '#a60c22', '#eb3025', '#5c0876'] },
+  { name: 'Paper / Poison Garden', colors: ['#122719', '#087746', '#59209d', '#aa1761', '#c64d05'] },
+  { name: 'Paper / Electric Ink', colors: ['#180047', '#6800c9', '#cf0065', '#0069ac', '#00745a'] },
+  { name: 'Acid Riot', colors: ['#ff165d', '#ff6500', '#edff00', '#00edba', '#7300ff'] },
+  { name: 'Laser Candy', colors: ['#ff00b7', '#6b00ff', '#00cfff', '#18ff65', '#fff000'] },
+  { name: 'Infrared Fever', colors: ['#36001b', '#a6004c', '#ff003e', '#ff5a00', '#ffe000'] },
+  { name: 'Ultraviolet Shock', colors: ['#210064', '#6400ff', '#c400ff', '#ff00a6', '#00eaff'] },
+  { name: 'Toxic Chrome', colors: ['#080d0c', '#466900', '#a4f000', '#00d5a0', '#e8ff6c'] },
+  { name: 'Pop Collision', colors: ['#002cff', '#ff2020', '#ffdc00', '#00b68b', '#ff00ca'] },
   { name: 'Lapis & Gold', colors: ['#0b1f4d', '#1c4fa1', '#3f7fd1', '#e8c25a', '#f5e6b8'] },
   { name: 'Emerald Kufic', colors: ['#04211a', '#0d5c46', '#1f9c72', '#d8b45a', '#f1e2b0'] },
   { name: 'Ivory & Ink', colors: ['#141414', '#3a3a3a', '#8a8a8a', '#d8cbb0', '#f5efe0'] },
@@ -52,11 +64,15 @@ export type VisualMode =
   | 'scribbleGlitch'
   | 'numberGlitch'
   | 'chaosMix'
+  | 'bodyFlames'
+  | 'bodyRibbons'
+  | 'bodyPrism'
   | 'dualTexture'
   | 'dualTextureReverse';
 
 export class AppState {
   mode: VisualMode = 'fill';
+  bodyFx = { speed: 1, intensity: 1, scale: 1, usePalette: false };
   chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false };
   paletteName: string = PALETTE_PRESETS[0]!.name;
   palette: THREE.Color[] = PALETTE_PRESETS[0]!.colors.map((c) => new THREE.Color(c));
@@ -71,6 +87,7 @@ export class AppState {
   setPreset(name: string): void {
     const preset = PALETTE_PRESETS.find((p) => p.name === name);
     if (!preset) return;
+    this.chaos.usePalette = true; this.bodyFx.usePalette = true;
     this.paletteName = name;
     this.palette = preset.colors.map((c) => new THREE.Color(c));
   }
@@ -78,6 +95,7 @@ export class AppState {
   setCustomColor(index: number, hex: string): void {
     if (!this.palette[index]) return;
     this.palette[index].set(hex);
+    this.chaos.usePalette = true; this.bodyFx.usePalette = true;
     this.paletteName = 'Custom';
   }
 }

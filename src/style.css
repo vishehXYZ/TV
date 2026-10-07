@@ -752,14 +752,14 @@ body.presentation-mode .stats-panel {
 .sound-controls button { overflow-wrap:anywhere; max-width:280px; }
 
 /* Studio workspace: the preview and controls each have dedicated space. */
-.studio-layout { --dock-width: 340px; --toolbar-height: 52px; --status-height: 28px; }
+.studio-layout { --dock-width: 286px; --toolbar-height: 52px; --status-height: 28px; }
 .studio-toolbar { position: absolute; inset: 0 0 auto; height: var(--toolbar-height); display: flex; align-items: center; gap: 16px; padding: 0 16px; z-index: 5; background: #111319; border-bottom: 1px solid var(--panel-border); color: var(--text-bright); }
 .studio-toolbar strong { font-size: 13px; letter-spacing: .15em; color: #e8d197; }
 .studio-toolbar > span { font-size: 12px; color: var(--text-dim); margin-right: auto; }
 .studio-layout .settings-toggle-button, .studio-layout .presentation-toggle-button { position: static; display: flex; width: auto; height: 32px; padding: 0 12px; font-size: 12px; box-shadow: none; }
 .studio-layout .presentation-toggle-button { font-size: 20px; }
-.studio-stage { position: absolute; top: var(--toolbar-height); bottom: var(--status-height); left: 0; right: var(--dock-width); overflow: hidden; background: #05050a; }
-.studio-dock { position: absolute; top: var(--toolbar-height); bottom: var(--status-height); right: 0; width: var(--dock-width); overflow-y: auto; overflow-x: hidden; padding: 12px; background: #14161d; border-left: 1px solid var(--panel-border); color: var(--text-bright); scrollbar-width: thin; }
+.studio-stage { position: absolute; top: var(--toolbar-height); bottom: var(--status-height); left: var(--dock-width); right: 0; overflow: hidden; background: #05050a; }
+.studio-dock { position: absolute; top: var(--toolbar-height); bottom: var(--status-height); left: 0; width: var(--dock-width); overflow-y: auto; overflow-x: hidden; padding: 12px; background: #14161d; border-right: 1px solid var(--panel-border); color: var(--text-bright); scrollbar-width: thin; }
 .studio-group { border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 10px; background: #1a1d26; }
 .studio-group > summary { padding: 12px; font-size: 12px; font-weight: 650; cursor: pointer; user-select: none; }
 .studio-group > summary:hover { background: rgba(255,255,255,.04); }
@@ -783,13 +783,13 @@ body.presentation-mode .stats-panel {
 .studio-status { position: absolute; inset: auto 0 0; height: var(--status-height); background: #111319; border-top: 1px solid var(--panel-border); padding: 6px 12px; }
 .studio-layout #status { position: static; font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .studio-layout.controls-hidden .studio-dock { display: none; }
-.studio-layout.controls-hidden .studio-stage { right: 0; }
+.studio-layout.controls-hidden .studio-stage { left: 0; right: 0; }
 body:has(.studio-layout) .stats-panel { display: none; }
 body.presentation-mode .studio-dock, body.presentation-mode .studio-toolbar, body.presentation-mode .studio-status { display: none !important; }
 body.presentation-mode .studio-stage { inset: 0; }
 @media (max-width: 680px) {
   .studio-layout { --dock-width: 0px; }
-  .studio-layout .studio-stage { bottom: 46%; right: 0; }
+  .studio-layout .studio-stage { bottom: 46%; left: 0; right: 0; }
   .studio-layout .studio-dock { top: 54%; bottom: var(--status-height); width: 100%; border-left: 0; border-top: 1px solid var(--panel-border); }
   .studio-layout.controls-hidden .studio-stage { bottom: var(--status-height); }
   .studio-layout .mode-switcher { grid-template-columns: repeat(4, minmax(0,1fr)); }

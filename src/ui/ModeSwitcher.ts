@@ -18,6 +18,7 @@ interface ModeCategory {
  * behind repeated clicks on the same button.
  */
 const CATEGORIES: ModeCategory[] = [
+  {label:'Body FX', styles:[{id:'bodyFlames',styleLabel:'Flames'},{id:'bodyRibbons',styleLabel:'Neon Ribbons'},{id:'bodyPrism',styleLabel:'Prism Shards'}]},
   {label:'Vertical', styles:[{id:'verticalLines',styleLabel:'Sharp Lines'}]},
   {label:'Chaos', styles:[{id:'scribbleGlitch',styleLabel:'Scribbles'},{id:'numberGlitch',styleLabel:'Numbers'},{id:'chaosMix',styleLabel:'Mixed'}]},
   {label:'Textures', styles:[{id:'dualTexture',styleLabel:'Lines / Dots'},{id:'dualTextureReverse',styleLabel:'Dots / Crosses'}]},

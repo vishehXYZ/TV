@@ -43,9 +43,9 @@ export class SceneManager {
     this.composer.addPass(this.bloomPass);
     // Composite a white paper backdrop after glow, keeping existing additive visuals readable.
     this.backdropPass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uWhite: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uWhite: { value: 0 }, uMonochrome: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader: 'uniform sampler2D tDiffuse; uniform float uWhite; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); vec3 paper=vec3(1.0-coverage)+ink*0.65; gl_FragColor=vec4(mix(c.rgb,paper,uWhite),c.a);}',
+      fragmentShader: 'uniform sampler2D tDiffuse; uniform float uWhite; uniform float uMonochrome; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); vec3 paper=mix(vec3(1.0-coverage)+ink*0.65,vec3(1.0-coverage),uMonochrome); gl_FragColor=vec4(mix(c.rgb,paper,uWhite),c.a);}',
     });
     this.composer.addPass(this.backdropPass);
     this.composer.addPass(new OutputPass());
@@ -148,7 +148,7 @@ export class SceneManager {
     this.resize();
   }
 
-  setWhiteBackdrop(enabled: boolean): void { this.backdropPass.uniforms.uWhite!.value = enabled ? 1 : 0; }
+  setWhiteBackdrop(enabled: boolean, monochrome = false): void { this.backdropPass.uniforms.uWhite!.value = enabled ? 1 : 0; this.backdropPass.uniforms.uMonochrome!.value = monochrome ? 1 : 0; }
 
   render(): void {
     this.composer.render();

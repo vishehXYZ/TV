@@ -23,19 +23,21 @@ export class ChaosMode {
     this.context = this.canvas.getContext('2d')!;
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.wrapS = this.texture.wrapT = THREE.RepeatWrapping;
     this.material = new THREE.ShaderMaterial({
       vertexShader, transparent: true, depthWrite: false,
-      uniforms: { uInk: { value: this.texture }, uMask: { value: null }, uMaskResolution: { value: new THREE.Vector2(1,1) }, uAspect: { value: 1 }, uHasMask: { value: 0 } },
+      uniforms: { uFull: { value: 1 }, uCenter: { value: new THREE.Vector2() }, uInk: { value: this.texture }, uMask: { value: null }, uMaskResolution: { value: new THREE.Vector2(1,1) }, uAspect: { value: 1 }, uHasMask: { value: 0 } },
       fragmentShader: `uniform sampler2D uInk; uniform sampler2D uMask; uniform vec2 uMaskResolution;
-      uniform float uAspect; uniform float uHasMask; varying vec2 vStagePos;
+      uniform float uAspect; uniform float uHasMask; uniform float uFull; uniform vec2 uCenter; varying vec2 vStagePos;
       ${maskSample}
       void main(){
-        vec2 uv=vec2(vStagePos.x/(2.0*uAspect)+0.5,vStagePos.y*0.5+0.5);
+        vec2 inkPos=vStagePos-uCenter*0.3;
+        vec2 uv=vec2(inkPos.x/(2.0*uAspect)+0.5,inkPos.y*0.5+0.5);
         vec4 ink=texture2D(uInk,uv);
         float body=uHasMask>0.5?smoothstep(0.25,0.65,sampleMask(vStagePos)):0.0;
         float inner=uHasMask>0.5?smoothstep(0.25,0.65,sampleMask(vStagePos+vec2(0.014,0.0)))*smoothstep(0.25,0.65,sampleMask(vStagePos-vec2(0.014,0.0)))*smoothstep(0.25,0.65,sampleMask(vStagePos+vec2(0.0,0.014)))*smoothstep(0.25,0.65,sampleMask(vStagePos-vec2(0.0,0.014))):0.0;
         float edge=max(0.0,body-inner);
-        float ambient=uHasMask>0.5?0.06:0.55;
+        float ambient=uFull>0.5?1.0:(uHasMask>0.5?0.06:0.55);
         float a=ink.a*max(body,ambient);
         float base=body*0.24;
         vec3 color=mix(vec3(0.045,0.13,0.22),ink.rgb,ink.a);
@@ -54,6 +56,16 @@ export class ChaosMode {
     const mask = this.mask.update(tracker.state), u = this.material.uniforms;
     u.uMask!.value = mask; u.uMaskResolution!.value.set(this.mask.width,this.mask.height);
     u.uAspect!.value = this.scene.aspect; u.uHasMask!.value = mask && tracker.state.hasDetection ? 1 : 0;
+    u.uFull!.value = state.chaos.coverage === 'Full space' ? 1 : 0;
+    const center = u.uCenter!.value as THREE.Vector2;
+    const left = tracker.state.landmarks[11], right = tracker.state.landmarks[12];
+    if (tracker.state.hasDetection && left && right) {
+      let x = 1 - (left.x + right.x) / 2, y = 1 - (left.y + right.y) / 2;
+      const aspect = this.scene.aspect, maskAspect = this.mask.width / this.mask.height;
+      if (maskAspect > aspect) x = (x - 0.5) * maskAspect / aspect + 0.5;
+      else y = (y - 0.5) * aspect / maskAspect + 0.5;
+      center.set((x - 0.5) * 2 * aspect, (y - 0.5) * 2);
+    } else center.set(0,0);
     if (time - this.lastFrame < 1 / 24) return;
     this.lastFrame = time;
     const c = this.context, w = this.canvas.width, h = this.canvas.height;

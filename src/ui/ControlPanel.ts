@@ -90,6 +90,7 @@ export class ControlPanel {
     // A single post-process pass applied after every mode is composited, so this one control
     // tames "too much" glow/bloom everywhere at once instead of needing a knob per mode.
     const chaosFolder = this.pane.addFolder({ title: 'Chaos' });
+    chaosFolder.addBinding(appState.chaos, 'coverage', { label: 'Coverage', options: { 'Full space': 'Full space', 'Inside body': 'Inside body' } });
     chaosFolder.addBinding(appState.chaos, 'usePalette', { label: 'Use selected palette' });
     chaosFolder.addBinding(appState.chaos, 'density', { min: 0.3, max: 2, step: 0.1 });
     chaosFolder.addBinding(appState.chaos, 'speed', { min: 0.2, max: 3, step: 0.1 });
@@ -101,7 +102,7 @@ export class ControlPanel {
     bodyFolder.addBinding(appState.bodyFx, 'speed', { min: 0.2, max: 3, step: 0.1 });
     bodyFolder.addBinding(appState.bodyFx, 'intensity', { min: 0.3, max: 2, step: 0.1 });
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
-    this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism'] });
+    this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
 
     const glowFolder = this.pane.addFolder({ title: 'Glow (all modes)' });
     glowFolder.addBinding(bloomPass, 'strength', { min: 0, max: 3, step: 0.05, label: 'intensity' });

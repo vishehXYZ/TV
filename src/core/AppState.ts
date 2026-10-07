@@ -67,13 +67,16 @@ export type VisualMode =
   | 'bodyFlames'
   | 'bodyRibbons'
   | 'bodyPrism'
+  | 'geoPortal'
+  | 'geoOrbits'
+  | 'geoFracture'
   | 'dualTexture'
   | 'dualTextureReverse';
 
 export class AppState {
   mode: VisualMode = 'fill';
   bodyFx = { speed: 1, intensity: 1, scale: 1, usePalette: false };
-  chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false };
+  chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false, coverage: 'Full space' };
   paletteName: string = PALETTE_PRESETS[0]!.name;
   palette: THREE.Color[] = PALETTE_PRESETS[0]!.colors.map((c) => new THREE.Color(c));
   girih: GirihParams = { ...DEFAULT_GIRIH_PARAMS };

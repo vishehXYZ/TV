@@ -77,7 +77,7 @@ const chromaGeoMode = new ChromaGeoMode(sceneManager, appState);
 const sketchMode = new SketchMode(sceneManager, appState);
 const rippleMode = new RippleMode(sceneManager, video, backgroundLayer);
 const revealMode = new RevealMode(sceneManager, video, backgroundLayer);
-const surfaces = { bodyFlames: new BodyFxMode(sceneManager, 0), bodyRibbons: new BodyFxMode(sceneManager, 1), bodyPrism: new BodyFxMode(sceneManager, 2), verticalLines: new SurfaceMode(sceneManager, appState, 0), scribbleGlitch: new ChaosMode(sceneManager, 0), numberGlitch: new ChaosMode(sceneManager, 1), chaosMix: new ChaosMode(sceneManager, 2), dualTexture: new SurfaceMode(sceneManager, appState, 2), dualTextureReverse: new SurfaceMode(sceneManager, appState, 3) };
+const surfaces = { geoPortal: new BodyFxMode(sceneManager, 3), geoOrbits: new BodyFxMode(sceneManager, 4), geoFracture: new BodyFxMode(sceneManager, 5), bodyFlames: new BodyFxMode(sceneManager, 0), bodyRibbons: new BodyFxMode(sceneManager, 1), bodyPrism: new BodyFxMode(sceneManager, 2), verticalLines: new SurfaceMode(sceneManager, appState, 0), scribbleGlitch: new ChaosMode(sceneManager, 0), numberGlitch: new ChaosMode(sceneManager, 1), chaosMix: new ChaosMode(sceneManager, 2), dualTexture: new SurfaceMode(sceneManager, appState, 2), dualTextureReverse: new SurfaceMode(sceneManager, appState, 3) };
 const motionSound = new MotionSound();
 const modeController = new ModeController(
   appState,
@@ -200,7 +200,7 @@ const renderFrame = (): void => {
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
   switch (appState.mode) {
-    case 'verticalLines': case 'scribbleGlitch': case 'numberGlitch': case 'chaosMix': case 'bodyFlames': case 'bodyRibbons': case 'bodyPrism': case 'dualTexture': case 'dualTextureReverse':
+    case 'verticalLines': case 'scribbleGlitch': case 'numberGlitch': case 'chaosMix': case 'bodyFlames': case 'bodyRibbons': case 'bodyPrism': case 'geoPortal': case 'geoOrbits': case 'geoFracture': case 'dualTexture': case 'dualTextureReverse':
       surfaces[appState.mode].update(poseTracker, appState, lastElapsed); break;
     case 'fill':
       fillMode.update(poseTracker, appState, lastElapsed);

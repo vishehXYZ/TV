@@ -10,6 +10,9 @@ export interface PalettePreset {
 }
 
 export const PALETTE_PRESETS: PalettePreset[] = [
+  { name: 'Paper / Scarlet Ink', colors: ['#ff1025', '#e00016', '#ff3c20', '#b90020', '#ff6050'] },
+  { name: 'Paper / Red & Graphite', colors: ['#fefefe', '#f62a24', '#bcbcbc', '#ff451d', '#eeeeee'] },
+  { name: 'Graphite Pencil', colors: ['#ffffff', '#dddddd', '#aaaaaa', '#f6f6f6', '#c2c2c2'] },
   { name: 'White Paper / Black Ink', colors: ['#fafafa', '#c6c6c6', '#808080', '#eeeeee', '#454545'] },
   { name: 'X-Ray Monochrome', colors: ['#020202', '#fcfcfc', '#202020', '#b9b9b9', '#595959'] },
   { name: 'Silver Static', colors: ['#06080c', '#303741', '#77818e', '#c7d1dc', '#ffffff'] },
@@ -76,9 +79,9 @@ export type VisualMode =
 export class AppState {
   mode: VisualMode = 'fill';
   bodyFx = { speed: 1, intensity: 1, scale: 1, usePalette: false };
-  chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false, coverage: 'Full space' };
-  paletteName: string = PALETTE_PRESETS[0]!.name;
-  palette: THREE.Color[] = PALETTE_PRESETS[0]!.colors.map((c) => new THREE.Color(c));
+  chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false, coverage: 'Full space', appearance: 'Color', motion: 1, showBody: false, cuts: false };
+  paletteName: string = 'Lapis & Gold';
+  palette: THREE.Color[] = PALETTE_PRESETS.find(p => p.name === 'Lapis & Gold')!.colors.map((c) => new THREE.Color(c));
   girih: GirihParams = { ...DEFAULT_GIRIH_PARAMS };
   abstract: AbstractParams = { ...DEFAULT_ABSTRACT_PARAMS };
   sketch: SketchParams = { ...DEFAULT_SKETCH_PARAMS };

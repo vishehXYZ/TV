@@ -90,6 +90,10 @@ export class ControlPanel {
     // A single post-process pass applied after every mode is composited, so this one control
     // tames "too much" glow/bloom everywhere at once instead of needing a knob per mode.
     const chaosFolder = this.pane.addFolder({ title: 'Chaos' });
+    chaosFolder.addBinding(appState.chaos, 'appearance', { label: 'Ink style', options: { Color: 'Color', 'Red ink': 'Red ink', 'Graphite pencil': 'Graphite pencil' } });
+    chaosFolder.addBinding(appState.chaos, 'motion', { label: 'Body reaction', min: 0, max: 2, step: 0.1 });
+    chaosFolder.addBinding(appState.chaos, 'showBody', { label: 'Body outline' });
+    chaosFolder.addBinding(appState.chaos, 'cuts', { label: 'Glitch slices' });
     chaosFolder.addBinding(appState.chaos, 'coverage', { label: 'Coverage', options: { 'Full space': 'Full space', 'Inside body': 'Inside body' } });
     chaosFolder.addBinding(appState.chaos, 'usePalette', { label: 'Use selected palette' });
     chaosFolder.addBinding(appState.chaos, 'density', { min: 0.3, max: 2, step: 0.1 });

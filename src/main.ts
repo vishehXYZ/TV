@@ -168,7 +168,11 @@ let lastDt = 1 / 60;
 const renderFrame = (): void => {
   motionSound.update(poseTracker.state);
   motionSound.mix(audioReactor.audioStream);
-  backgroundLayer.update(['White Paper / Black Ink', 'X-Ray Monochrome', 'Silver Static'].includes(appState.paletteName));
+  const chaosActive = ['scribbleGlitch', 'numberGlitch', 'chaosMix'].includes(appState.mode);
+  const pencilInk = chaosActive && appState.chaos.appearance === 'Graphite pencil';
+  const inkOverride = chaosActive && appState.chaos.appearance !== 'Color';
+  const monoPalette = ['White Paper / Black Ink', 'X-Ray Monochrome', 'Silver Static', 'Graphite Pencil'].includes(appState.paletteName);
+  backgroundLayer.update(inkOverride ? pencilInk : monoPalette, inkOverride || appState.paletteName.startsWith('Paper /'));
   modeController.syncVisibility();
   controlPanel.syncVisibility();
   selfViewToggleButton.classList.toggle('active', backgroundLayer.mode === 'camera');

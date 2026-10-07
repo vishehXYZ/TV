@@ -166,8 +166,8 @@ export class BackgroundLayer {
     }
   }
 
-  update(monochrome = false): void {
-    this.sceneManager.setWhiteBackdrop(this.mode === 'none' && this.solidColor === 'white', monochrome);
+  update(monochrome = false, strongInk = false): void {
+    this.sceneManager.setWhiteBackdrop(this.mode === 'none' && this.solidColor === 'white', monochrome, strongInk);
     if (this.mode === 'none') return;
     const activeVideo = this.ownedVideoEl ?? this.sharedVideoEl;
     if (this.ownedVideoEl && (this.ownedVideoEl.currentTime >= this.trimEnd || this.ownedVideoEl.currentTime < this.trimStart)) this.ownedVideoEl.currentTime = this.trimStart;

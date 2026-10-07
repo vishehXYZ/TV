@@ -55,7 +55,7 @@ export class ModeController {
     sketchMode: SketchMode,
     rippleMode: RippleMode,
     revealMode: RevealMode,
-    extraModes: Pick<Record<AppState['mode'], Visible>, 'verticalLines' | 'whiteMotifs' | 'dualTexture' | 'dualTextureReverse'>,
+    extraModes: Pick<Record<AppState['mode'], Visible>, 'verticalLines' | 'scribbleGlitch' | 'numberGlitch' | 'chaosMix' | 'dualTexture' | 'dualTextureReverse'>,
   ) {
     this.appState = appState;
     this.modes = {

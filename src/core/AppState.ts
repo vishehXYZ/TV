@@ -49,12 +49,15 @@ export type VisualMode =
   | 'ripple'
   | 'reveal'
   | 'verticalLines'
-  | 'whiteMotifs'
+  | 'scribbleGlitch'
+  | 'numberGlitch'
+  | 'chaosMix'
   | 'dualTexture'
   | 'dualTextureReverse';
 
 export class AppState {
   mode: VisualMode = 'fill';
+  chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false };
   paletteName: string = PALETTE_PRESETS[0]!.name;
   palette: THREE.Color[] = PALETTE_PRESETS[0]!.colors.map((c) => new THREE.Color(c));
   girih: GirihParams = { ...DEFAULT_GIRIH_PARAMS };

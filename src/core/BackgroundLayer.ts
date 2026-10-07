@@ -36,6 +36,8 @@ export class BackgroundLayer {
   }
   resetTrim(): void { this.trimStart = 0; this.trimEnd = Infinity; }
   mode: BackgroundMode = 'none';
+  solidColor: 'black' | 'white' = 'black';
+  setSolidColor(color: 'black' | 'white'): void { this.solidColor = color; }
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -165,6 +167,7 @@ export class BackgroundLayer {
   }
 
   update(): void {
+    this.sceneManager.setWhiteBackdrop(this.mode === 'none' && this.solidColor === 'white');
     if (this.mode === 'none') return;
     const activeVideo = this.ownedVideoEl ?? this.sharedVideoEl;
     if (this.ownedVideoEl && (this.ownedVideoEl.currentTime >= this.trimEnd || this.ownedVideoEl.currentTime < this.trimStart)) this.ownedVideoEl.currentTime = this.trimStart;

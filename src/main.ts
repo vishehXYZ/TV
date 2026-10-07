@@ -1,3 +1,5 @@
+import { ChaosMode } from './modes/ChaosMode';
+import { StudioLayout } from './ui/StudioLayout';
 import { SurfaceMode } from './modes/SurfaceMode';
 import { MotionSound } from './tracking/MotionSound';
 import Stats from 'stats.js';
@@ -74,7 +76,7 @@ const chromaGeoMode = new ChromaGeoMode(sceneManager, appState);
 const sketchMode = new SketchMode(sceneManager, appState);
 const rippleMode = new RippleMode(sceneManager, video, backgroundLayer);
 const revealMode = new RevealMode(sceneManager, video, backgroundLayer);
-const surfaces = { verticalLines: new SurfaceMode(sceneManager, appState, 0), whiteMotifs: new SurfaceMode(sceneManager, appState, 1), dualTexture: new SurfaceMode(sceneManager, appState, 2), dualTextureReverse: new SurfaceMode(sceneManager, appState, 3) };
+const surfaces = { verticalLines: new SurfaceMode(sceneManager, appState, 0), scribbleGlitch: new ChaosMode(sceneManager, 0), numberGlitch: new ChaosMode(sceneManager, 1), chaosMix: new ChaosMode(sceneManager, 2), dualTexture: new SurfaceMode(sceneManager, appState, 2), dualTextureReverse: new SurfaceMode(sceneManager, appState, 3) };
 const motionSound = new MotionSound();
 const modeController = new ModeController(
   appState,
@@ -197,7 +199,7 @@ const renderFrame = (): void => {
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
   switch (appState.mode) {
-    case 'verticalLines': case 'whiteMotifs': case 'dualTexture': case 'dualTextureReverse':
+    case 'verticalLines': case 'scribbleGlitch': case 'numberGlitch': case 'chaosMix': case 'dualTexture': case 'dualTextureReverse':
       surfaces[appState.mode].update(poseTracker, appState, lastElapsed); break;
     case 'fill':
       fillMode.update(poseTracker, appState, lastElapsed);
@@ -321,6 +323,11 @@ pauseButton.addEventListener('click', () => {
 // camera, phone front/back, etc.) — see CameraPicker.ts for why it can't be populated any earlier.
 const cameraPicker = new CameraPicker(poseTracker);
 appRoot.appendChild(cameraPicker.container);
+
+new StudioLayout(appRoot, canvas, modeSwitcher.container, uiRoot, settingsToggleButton, presentationToggleButton,
+  [video, pauseButton, selfViewToggleButton, cameraPicker.container],
+  [backgroundControls.container, backgroundControls.backdropContainer, backgroundControls.editContainer],
+  soundControls.container, recordingControls.container, statusEl);
 
 const startScreen = new StartScreen();
 appRoot.appendChild(startScreen.container);

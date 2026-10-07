@@ -121,7 +121,21 @@ export class BackgroundControls {
     const sourceRow = document.createElement('div');
     sourceRow.className = 'control-row';
     sourceRow.append(noneBtn, cameraBtn, imageBtn, videoBtn, imageInput, videoInput);
-    this.container.append(sourceRow, opacityRow);
+    const solidRow = document.createElement('div');
+    solidRow.className = 'control-row';
+    const solidLabel = document.createElement('span'); solidLabel.textContent = 'Empty background';
+    const blackButton = document.createElement('button'), whiteButton = document.createElement('button');
+    for (const [button, color] of [[blackButton, 'black'], [whiteButton, 'white']] as const) {
+      button.className = 'background-button'; button.textContent = color === 'black' ? 'Black' : 'White';
+      button.classList.toggle('active', color === 'black');
+      button.addEventListener('click', () => {
+        this.background.setSolidColor(color); noneBtn.click();
+        blackButton.classList.toggle('active', color === 'black');
+        whiteButton.classList.toggle('active', color === 'white');
+      });
+    }
+    solidRow.append(solidLabel, blackButton, whiteButton);
+    this.container.append(sourceRow, solidRow, opacityRow);
 
     const dimLabel = document.createElement('span');
     dimLabel.className = 'background-label';

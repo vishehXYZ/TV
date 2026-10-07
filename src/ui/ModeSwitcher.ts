@@ -19,7 +19,7 @@ interface ModeCategory {
  */
 const CATEGORIES: ModeCategory[] = [
   {label:'Vertical', styles:[{id:'verticalLines',styleLabel:'Sharp Lines'}]},
-  {label:'White', styles:[{id:'whiteMotifs',styleLabel:'Ink & Color'}]},
+  {label:'Chaos', styles:[{id:'scribbleGlitch',styleLabel:'Scribbles'},{id:'numberGlitch',styleLabel:'Numbers'},{id:'chaosMix',styleLabel:'Mixed'}]},
   {label:'Textures', styles:[{id:'dualTexture',styleLabel:'Lines / Dots'},{id:'dualTextureReverse',styleLabel:'Dots / Crosses'}]},
   { label: 'Flurix', styles: [{ id: 'fill', styleLabel: 'Flurix' }] },
   {

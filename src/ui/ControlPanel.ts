@@ -94,7 +94,7 @@ export class ControlPanel {
     chaosFolder.addBinding(appState.chaos, 'motion', { label: 'Body reaction', min: 0, max: 2, step: 0.1 });
     chaosFolder.addBinding(appState.chaos, 'showBody', { label: 'Body outline' });
     chaosFolder.addBinding(appState.chaos, 'cuts', { label: 'Glitch slices' });
-    chaosFolder.addBinding(appState.chaos, 'coverage', { label: 'Coverage', options: { 'Full space': 'Full space', 'Inside body': 'Inside body' } });
+    chaosFolder.addBinding(appState.chaos, 'coverage', { label: 'Coverage', options: { 'Full space': 'Full space', 'Full space + Body': 'Full space + Body', 'Inside body': 'Inside body' } });
     chaosFolder.addBinding(appState.chaos, 'usePalette', { label: 'Use selected palette' });
     chaosFolder.addBinding(appState.chaos, 'density', { min: 0.3, max: 2, step: 0.1 });
     chaosFolder.addBinding(appState.chaos, 'speed', { min: 0.2, max: 3, step: 0.1 });

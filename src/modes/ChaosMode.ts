@@ -28,9 +28,9 @@ export class ChaosMode {
     this.texture.wrapS = this.texture.wrapT = THREE.ClampToEdgeWrapping;
     this.material = new THREE.ShaderMaterial({
       vertexShader, transparent: true, depthWrite: false,
-      uniforms: { uBodyFill: { value: 0 }, uBodyColor: { value: new THREE.Color() }, uShowBody: { value: 0 }, uFull: { value: 1 }, uCenter: { value: new THREE.Vector2() }, uInk: { value: this.texture }, uMask: { value: null }, uMaskResolution: { value: new THREE.Vector2(1,1) }, uAspect: { value: 1 }, uHasMask: { value: 0 } },
+      uniforms: { uOutlineColor: { value: new THREE.Color() }, uBodyFill: { value: 0 }, uBodyColor: { value: new THREE.Color() }, uShowBody: { value: 0 }, uFull: { value: 1 }, uCenter: { value: new THREE.Vector2() }, uInk: { value: this.texture }, uMask: { value: null }, uMaskResolution: { value: new THREE.Vector2(1,1) }, uAspect: { value: 1 }, uHasMask: { value: 0 } },
       fragmentShader: `uniform sampler2D uInk; uniform sampler2D uMask; uniform vec2 uMaskResolution;
-      uniform float uAspect; uniform float uHasMask; uniform float uFull; uniform float uShowBody; uniform float uBodyFill; uniform vec3 uBodyColor; uniform vec2 uCenter; varying vec2 vStagePos;
+      uniform float uAspect; uniform float uHasMask; uniform float uFull; uniform float uShowBody; uniform float uBodyFill; uniform vec3 uBodyColor; uniform vec3 uOutlineColor; uniform vec2 uCenter; varying vec2 vStagePos;
       ${maskSample}
       void main(){
         vec2 inkPos=vStagePos;
@@ -44,7 +44,7 @@ export class ChaosMode {
         float outline=uFull<0.5 || uShowBody>0.5?1.0:0.0;
         float base=body*0.16*outline;
         vec3 color=ink.a>0.01?ink.rgb:vec3(0.12);
-        color=mix(color,vec3(0.05,0.85,0.95),edge*outline);
+        color=mix(color,uOutlineColor,edge*outline);
         if(uBodyFill>0.5){
           // A second texture scale and diagonal hatching distinguish the real silhouette.
           vec2 relative=vStagePos-uCenter;
@@ -56,7 +56,7 @@ export class ChaosMode {
           interior=mix(interior,uBodyColor,hatch*0.7);
           color=mix(color,interior,body);
           a=mix(a,max(0.28,max(insideInk.a,hatch*0.7)),body);
-          color=mix(color,uBodyColor,edge);
+          color=mix(color,uOutlineColor,edge);
           a=max(a,edge*0.9);
         }
         gl_FragColor=vec4(color,max(a,max(base,edge*0.85*outline)));
@@ -76,6 +76,7 @@ export class ChaosMode {
     const bodyFill = state.chaos.coverage === 'Full space + Body';
     u.uFull!.value = state.chaos.coverage !== 'Inside body' ? 1 : 0;
     u.uBodyFill!.value = bodyFill ? 1 : 0;
+    u.uOutlineColor!.value.copy(state.palette[3]);
     u.uBodyColor!.value = state.chaos.appearance === 'Graphite pencil' ? new THREE.Color('#eeeeee') : state.chaos.appearance === 'Red ink' ? new THREE.Color('#ff3020') : state.palette[3];
     u.uShowBody!.value = state.chaos.showBody || bodyFill ? 1 : 0;
     const center = u.uCenter!.value as THREE.Vector2;

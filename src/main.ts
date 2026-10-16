@@ -108,6 +108,7 @@ const modeController = new ModeController(
 );
 
 const controlPanel = new ControlPanel(uiRoot, appState, sceneManager.bloomPass);
+controlPanel.onClearTrace = () => sceneManager.motionDelayPass.reset();
 const modeSwitcher = new ModeSwitcher(appState);
 appRoot.appendChild(modeSwitcher.container);
 
@@ -276,6 +277,7 @@ const renderFrame = (): void => {
       revealMode.update(poseTracker, appState, lastElapsed, lastDt);
       break;
   }
+  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor]));
   sceneManager.render();
 };
 

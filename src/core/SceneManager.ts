@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { MotionDelayPass } from './MotionDelayPass';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -16,6 +17,7 @@ export class SceneManager {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
+  readonly motionDelayPass: MotionDelayPass;
   readonly bloomPass: UnrealBloomPass;
 
   private composer: EffectComposer;
@@ -41,6 +43,8 @@ export class SceneManager {
 
     this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.55, 0.72);
     this.composer.addPass(this.bloomPass);
+    this.motionDelayPass = new MotionDelayPass();
+    this.composer.addPass(this.motionDelayPass);
     // Composite a white paper backdrop after glow, keeping existing additive visuals readable.
     this.backdropPass = new ShaderPass({
       uniforms: { tDiffuse: { value: null }, uWhite: { value: 0 }, uMonochrome: { value: 0 }, uStrongInk: { value: 0 } },

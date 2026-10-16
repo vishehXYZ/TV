@@ -9,6 +9,7 @@ import { PALETTE_PRESETS } from '../core/AppState';
  * are hidden unless the matching mode is active, via syncVisibility(), so a slider that currently does
  * nothing isn't sitting on screen looking broken. */
 export class ControlPanel {
+  onClearTrace?: () => void;
   private pane: Pane;
   private paletteHex: Record<string, string>;
   private appState: AppState;
@@ -107,6 +108,13 @@ export class ControlPanel {
     bodyFolder.addBinding(appState.bodyFx, 'intensity', { min: 0.3, max: 2, step: 0.1 });
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
     this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
+
+    const delayFolder = this.pane.addFolder({ title: 'Motion Trace / Delay (all modes)' });
+    delayFolder.addBinding(appState.motionDelay, 'enabled', { label: 'Enable delay' });
+    delayFolder.addBinding(appState.motionDelay, 'duration', { label: 'Trail seconds', min: 0.2, max: 5, step: 0.1 });
+    delayFolder.addBinding(appState.motionDelay, 'strength', { label: 'Echo strength', min: 0, max: 1, step: 0.05 });
+    delayFolder.addBinding(appState.motionDelay, 'echoes', { label: 'Echo copies', min: 2, max: 8, step: 1 });
+    delayFolder.addButton({ title: 'Clear trace' }).on('click', () => this.onClearTrace?.());
 
     const glowFolder = this.pane.addFolder({ title: 'Glow (all modes)' });
     glowFolder.addBinding(bloomPass, 'strength', { min: 0, max: 3, step: 0.05, label: 'intensity' });

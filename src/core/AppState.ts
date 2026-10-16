@@ -78,6 +78,7 @@ export type VisualMode =
 
 export class AppState {
   mode: VisualMode = 'fill';
+  motionDelay = { enabled: false, duration: 2, strength: 0.65, echoes: 6 };
   bodyFx = { speed: 1, intensity: 1, scale: 1, usePalette: false };
   chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false, coverage: 'Full space', appearance: 'Color', motion: 1, showBody: false, cuts: false };
   paletteName: string = 'Lapis & Gold';

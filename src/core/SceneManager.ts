@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { ObjectLayers } from './ObjectLayers';
+import { glassMediaMaskGLSL, glassMediaUniforms } from './GlassMediaMask';
 import { LineWeightPass } from './LineWeightPass';
 import { GlassVolumePass } from './GlassVolumePass';
 import { MotionDelayPass } from './MotionDelayPass';
@@ -19,12 +21,14 @@ export class SceneManager {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
+  readonly objectLayers: ObjectLayers;
   readonly lineWeightPass: LineWeightPass;
   readonly glassVolumePass: GlassVolumePass;
   readonly motionDelayPass: MotionDelayPass;
   readonly bloomPass: UnrealBloomPass;
 
   private composer: EffectComposer;
+  readonly mediaUniforms: Record<string, THREE.IUniform>;
   private backdropPass: ShaderPass;
   private viewHalfHeight = 1;
   /** When set, the live view is letterboxed to this exact aspect ratio (centered within the
@@ -51,15 +55,18 @@ export class SceneManager {
     this.composer.addPass(this.bloomPass);
     this.motionDelayPass = new MotionDelayPass();
     this.composer.addPass(this.motionDelayPass);
+    this.glassVolumePass = new GlassVolumePass();
+    this.mediaUniforms = glassMediaUniforms(this.glassVolumePass);
     // Composite a white paper backdrop after glow, keeping existing additive visuals readable.
     this.backdropPass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uWhite: { value: 0 }, uMonochrome: { value: 0 }, uStrongInk: { value: 0 } },
+      uniforms: { ...this.mediaUniforms, uMediaPresent: { value: 0 }, tDiffuse: { value: null }, uWhite: { value: 0 }, uMonochrome: { value: 0 }, uStrongInk: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader: 'uniform sampler2D tDiffuse; uniform float uWhite; uniform float uMonochrome; uniform float uStrongInk; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); float inkCoverage=clamp(coverage*1.7,0.0,1.0); vec3 strong=mix(vec3(1.0),ink/max(coverage,0.00001)*0.3,inkCoverage); vec3 paper=mix(mix(vec3(1.0-coverage)+ink*0.65,strong,uStrongInk),vec3(1.0-coverage),uMonochrome); gl_FragColor=vec4(mix(c.rgb,paper,uWhite),c.a);}',
+      fragmentShader: glassMediaMaskGLSL + 'uniform float uMediaPresent; uniform sampler2D tDiffuse; uniform float uWhite; uniform float uMonochrome; uniform float uStrongInk; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); float inkCoverage=clamp(coverage*1.7,0.0,1.0); vec3 strong=mix(vec3(1.0),ink/max(coverage,0.00001)*0.3,inkCoverage); vec3 paper=mix(mix(vec3(1.0-coverage)+ink*0.65,strong,uStrongInk),vec3(1.0-coverage),uMonochrome); float paperWeight=uWhite; if(uMediaPresent>0.5){paperWeight=uMediaInside>0.5 ? uWhite*(glassContains(vUv)?0.0:1.0):0.0;} gl_FragColor=vec4(mix(c.rgb,paper,paperWeight),c.a);}',
     });
     this.composer.addPass(this.backdropPass);
-    this.glassVolumePass = new GlassVolumePass();
     this.composer.addPass(this.glassVolumePass);
+    this.objectLayers = new ObjectLayers();
+    this.composer.addPass(this.objectLayers);
     this.composer.addPass(new OutputPass());
 
     this.resize();
@@ -161,6 +168,11 @@ export class SceneManager {
   }
 
   setWhiteBackdrop(enabled: boolean, monochrome = false, strongInk = false): void { this.backdropPass.uniforms.uWhite!.value = enabled ? 1 : 0; this.backdropPass.uniforms.uMonochrome!.value = monochrome ? 1 : 0; this.backdropPass.uniforms.uStrongInk!.value = strongInk ? 1 : 0; }
+
+  setMediaScope(inside: boolean, hasMedia: boolean): void {
+    this.mediaUniforms.uMediaInside!.value = inside ? 1 : 0;
+    this.backdropPass.uniforms.uMediaPresent!.value = hasMedia ? 1 : 0;
+  }
 
   render(): void {
     this.composer.render();

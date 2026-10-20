@@ -106,7 +106,10 @@ export class GlassVolumePass extends ShaderPass {
           vec3 backN=normalAt(farOrigin-direction*max(backT,0.0));
           float thickness=max(0.0,16.0-t-backT);
           vec2 shift=n.xy*uRefraction*(0.4+thickness)*vec2(1.0/uAspect,1.0);
-          vec3 art=texture2D(tDiffuse,clamp(vUv+shift,vec2(0.001),vec2(0.999))).rgb;
+          vec2 room=min(vUv,vec2(1.0)-vUv);
+          shift*=smoothstep(0.0,0.06,min(room.x,room.y));
+          shift=clamp(shift,-room*0.95,room*0.95);
+          vec3 art=texture2D(tDiffuse,vUv+shift).rgb;
           // Opposed softbox reflections make depth legible without concealing the artwork.
           float frontLight=pow(max(dot(n,normalize(vec3(-0.6,0.8,1.0))),0.0),36.0);
           float softReflection=pow(max(dot(n,normalize(vec3(-0.8,0.3,0.6))),0.0),8.0);

@@ -1,3 +1,5 @@
+import { ObjectLayerControls } from './ui/ObjectLayerControls';
+import { clipMediaMaterial } from './core/GlassMediaMask';
 import { BodyFxMode } from './modes/BodyFxMode';
 import { ChaosMode } from './modes/ChaosMode';
 import { StudioLayout } from './ui/StudioLayout';
@@ -175,6 +177,8 @@ const renderFrame = (): void => {
   const pencilInk = chaosActive && appState.chaos.appearance === 'Graphite pencil';
   const inkOverride = chaosActive && appState.chaos.appearance !== 'Color';
   const monoPalette = ['White Paper / Black Ink', 'X-Ray Monochrome', 'Silver Static', 'Graphite Pencil'].includes(appState.paletteName);
+  sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
+  sceneManager.setMediaScope(backgroundLayer.placement === 'Inside glass' && appState.glassVolume.enabled, backgroundLayer.mode !== 'none');
   backgroundLayer.update(inkOverride ? pencilInk : monoPalette, inkOverride || appState.paletteName.startsWith('Paper /'));
   modeController.syncVisibility();
   controlPanel.syncVisibility();
@@ -279,11 +283,13 @@ const renderFrame = (): void => {
       revealMode.update(poseTracker, appState, lastElapsed, lastDt);
       break;
   }
-  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor]));
-  sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.mode === 'none' && backgroundLayer.solidColor === 'white', appState.palette[3]!);
+  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, appState.glassVolume.enabled]));
+  sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
   sceneManager.render();
 };
+
+for (const mode of [pixelMeltMode, glitchMode, glitchMonoMode, glitchLinesMode, distortGlitchMode, rippleMode, revealMode]) clipMediaMaterial(mode.material, sceneManager.mediaUniforms);
 
 const stillExporter = new StillExporter(sceneManager);
 const recordingControls = new RecordingControls(canvas, stillExporter, renderFrame, audioReactor, sceneManager, () => { motionSound.mix(audioReactor.audioStream); return motionSound.stream ?? audioReactor.audioStream; });
@@ -338,7 +344,7 @@ appRoot.appendChild(cameraPicker.container);
 new StudioLayout(appRoot, canvas, modeSwitcher.container, uiRoot, settingsToggleButton, presentationToggleButton,
   [video, pauseButton, selfViewToggleButton, cameraPicker.container],
   [backgroundControls.container, backgroundControls.backdropContainer, backgroundControls.editContainer],
-  soundControls.container, recordingControls.container, statusEl, controlPanel);
+  soundControls.container, recordingControls.container, statusEl, controlPanel, new ObjectLayerControls(sceneManager.objectLayers).container);
 
 const startScreen = new StartScreen();
 appRoot.appendChild(startScreen.container);

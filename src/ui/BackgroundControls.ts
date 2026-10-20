@@ -123,19 +123,27 @@ export class BackgroundControls {
     sourceRow.append(noneBtn, cameraBtn, imageBtn, videoBtn, imageInput, videoInput);
     const solidRow = document.createElement('div');
     solidRow.className = 'control-row';
-    const solidLabel = document.createElement('span'); solidLabel.textContent = 'Empty background';
+    const solidLabel = document.createElement('span'); solidLabel.textContent = 'Canvas / outside glass';
     const blackButton = document.createElement('button'), whiteButton = document.createElement('button');
     for (const [button, color] of [[blackButton, 'black'], [whiteButton, 'white']] as const) {
       button.className = 'background-button'; button.textContent = color === 'black' ? 'Black' : 'White';
       button.classList.toggle('active', color === 'black');
       button.addEventListener('click', () => {
-        this.background.setSolidColor(color); noneBtn.click();
+        this.background.setSolidColor(color);
         blackButton.classList.toggle('active', color === 'black');
         whiteButton.classList.toggle('active', color === 'white');
       });
     }
     solidRow.append(solidLabel, blackButton, whiteButton);
-    this.container.append(sourceRow, solidRow, opacityRow);
+    const placementRow = document.createElement('div'); placementRow.className = 'control-row';
+    const placementLabel = document.createElement('label'); placementLabel.textContent = 'Media placement';
+    const placement = document.createElement('select'); placement.className = 'background-button';
+    for (const value of ['Full background', 'Inside glass'] as const) { const option = document.createElement('option'); option.value = value; option.textContent = value; placement.append(option); }
+    placement.value = background.placement;
+    placement.addEventListener('change', () => { background.placement = placement.value as typeof background.placement; });
+    placementRow.append(placementLabel, placement);
+    const placementHint = document.createElement('small'); placementHint.textContent = 'Inside glass needs Enable glass. Applies to Self View, Image and Video. Outside uses Black / White.';
+    this.container.append(sourceRow, solidRow, placementRow, placementHint, opacityRow);
 
     const dimLabel = document.createElement('span');
     dimLabel.className = 'background-label';

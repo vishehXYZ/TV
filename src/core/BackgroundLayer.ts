@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { SceneManager } from './SceneManager';
+import { clipMediaMaterial } from './GlassMediaMask';
 import { BackgroundMaterial } from '../generators/background/BackgroundMaterial';
 
 export type BackgroundMode = 'none' | 'camera' | 'image' | 'video';
@@ -36,6 +37,7 @@ export class BackgroundLayer {
   }
   resetTrim(): void { this.trimStart = 0; this.trimEnd = Infinity; }
   mode: BackgroundMode = 'none';
+  placement: 'Full background' | 'Inside glass' = 'Full background';
   solidColor: 'black' | 'white' = 'black';
   setSolidColor(color: 'black' | 'white'): void { this.solidColor = color; }
 
@@ -43,6 +45,7 @@ export class BackgroundLayer {
     this.sceneManager = sceneManager;
     const geometry = new THREE.PlaneGeometry(2, 2);
     this.material = new BackgroundMaterial();
+    clipMediaMaterial(this.material, sceneManager.mediaUniforms);
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.position.z = -0.99;
     this.mesh.renderOrder = -1000;
@@ -167,7 +170,7 @@ export class BackgroundLayer {
   }
 
   update(monochrome = false, strongInk = false): void {
-    this.sceneManager.setWhiteBackdrop(this.mode === 'none' && this.solidColor === 'white', monochrome, strongInk);
+    this.sceneManager.setWhiteBackdrop(this.solidColor === 'white', monochrome, strongInk);
     if (this.mode === 'none') return;
     const activeVideo = this.ownedVideoEl ?? this.sharedVideoEl;
     if (this.ownedVideoEl && (this.ownedVideoEl.currentTime >= this.trimEnd || this.ownedVideoEl.currentTime < this.trimStart)) this.ownedVideoEl.currentTime = this.trimStart;

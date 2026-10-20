@@ -833,3 +833,9 @@ body.presentation-mode .studio-stage { inset: 0; }
  .studio-toolbar-top strong { margin-right: auto; }
  .studio-menu-layout .mode-switcher { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
+
+.object-layer-controls { display:flex; flex-direction:column; gap:12px; }
+.object-layer-row { display:flex; gap:6px; margin-bottom:6px; }
+.object-layer-row > button:first-child { flex:1; min-width:0; overflow-wrap:anywhere; text-align:left; }
+.studio-menu-layout .object-layer-controls .tp-dfwv { position:static; width:100%; }
+.studio-menu-layout select { color:#e6e9f1; background:#252b38; max-width:100%; }

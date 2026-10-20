@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GlassVolumePass } from './GlassVolumePass';
 import { MotionDelayPass } from './MotionDelayPass';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -17,6 +18,7 @@ export class SceneManager {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
+  readonly glassVolumePass: GlassVolumePass;
   readonly motionDelayPass: MotionDelayPass;
   readonly bloomPass: UnrealBloomPass;
 
@@ -52,6 +54,8 @@ export class SceneManager {
       fragmentShader: 'uniform sampler2D tDiffuse; uniform float uWhite; uniform float uMonochrome; uniform float uStrongInk; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); float inkCoverage=clamp(coverage*1.7,0.0,1.0); vec3 strong=mix(vec3(1.0),ink/max(coverage,0.00001)*0.3,inkCoverage); vec3 paper=mix(mix(vec3(1.0-coverage)+ink*0.65,strong,uStrongInk),vec3(1.0-coverage),uMonochrome); gl_FragColor=vec4(mix(c.rgb,paper,uWhite),c.a);}',
     });
     this.composer.addPass(this.backdropPass);
+    this.glassVolumePass = new GlassVolumePass();
+    this.composer.addPass(this.glassVolumePass);
     this.composer.addPass(new OutputPass());
 
     this.resize();

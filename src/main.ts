@@ -278,6 +278,7 @@ const renderFrame = (): void => {
       break;
   }
   sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor]));
+  sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.mode === 'none' && backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.render();
 };
 

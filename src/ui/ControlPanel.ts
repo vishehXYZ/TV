@@ -8,7 +8,7 @@ import { PALETTE_PRESETS } from '../core/AppState';
  * folders only affect specific modes (e.g. "Pattern (Abstract)" does nothing outside Abstract) — those
  * are hidden unless the matching mode is active, via syncVisibility(), so a slider that currently does
  * nothing isn't sitting on screen looking broken. */
-export type ParameterSection = 'palette' | 'effects' | 'glow' | 'glass' | 'trace' | 'lines';
+export type ParameterSection = 'settings' | 'palette' | 'effects' | 'glow' | 'glass' | 'trace' | 'lines';
 
 export class ControlPanel {
   private section: ParameterSection = 'effects';
@@ -170,7 +170,8 @@ export class ControlPanel {
     this.lastMode = this.appState.mode;
     for (const entry of this.sections) {
       const modeRule = this.modeFolders.find(item => item.folder === entry.folder);
-      entry.folder.hidden = entry.section !== this.section || !!(modeRule && !modeRule.modes.includes(this.appState.mode));
+      const inSection = this.section === 'settings' ? entry.section !== 'glass' : entry.section === this.section;
+      entry.folder.hidden = !inSection || !!(modeRule && !modeRule.modes.includes(this.appState.mode));
     }
     this.emptyMessage.hidden = this.sections.some(entry => !entry.folder.hidden);
   }
@@ -184,7 +185,7 @@ export class ControlPanel {
   showSection(section: ParameterSection): void {
     this.section = section;
     this.lastMode = null;
-    for (const item of this.sections) if (item.section === section) item.folder.expanded = true;
+    for (const item of this.sections) if (item.section === section || (section === 'settings' && item.section !== 'glass')) item.folder.expanded = true;
     this.syncVisibility();
   }
 

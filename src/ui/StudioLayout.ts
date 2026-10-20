@@ -26,11 +26,7 @@ export class StudioLayout {
     const footer=document.createElement('footer');footer.className='studio-status';footer.append(status);app.append(footer);
     const groups = [
       { title:'Modes', hint:'Choose a visual mode and its style.', nodes:[modes] },
-      { title:'Palette', hint:'Presets and custom colors.', nodes:[parameters], parameter:'palette' },
-      { title:'Effects', hint:'Settings for your current mode. Choose another mode to see its controls.', nodes:[parameters], parameter:'effects' },
-      { title:'Glow', hint:'Glow intensity, spread and threshold.', nodes:[parameters], parameter:'glow' },
-      { title:'Lines', hint:'Global thickness across all modes.', nodes:[parameters], parameter:'lines' },
-      { title:'Trace', hint:'Visual motion echoes and trail duration.', nodes:[parameters], parameter:'trace' },
+      { title:'Settings', hint:'Palette, mode effects, glow, line thickness and motion trace.', nodes:[parameters], parameter:'settings' },
       { title:'Glass', hint:'Glass shape, position, depth and color.', nodes:[parameters], parameter:'glass' },
       { title:'Background', hint:'Background sources, video playback and edits.', nodes:background },
       { title:'Sound', hint:'Motion voices, audio delay, music and microphone.', nodes:[sound] },

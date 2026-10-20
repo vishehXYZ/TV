@@ -24,7 +24,7 @@ export class ObjectLayerControls {
    input.value='';
   });
   add.append(this.button('Import GLB / OBJ',()=>input.click()),input);
-  const help=document.createElement('p');help.className='studio-panel-hint';help.textContent='Add several objects or import multiple static models. Each layer has its own material and transform. Z controls front/back depth. GLB must contain embedded assets; OBJ imports geometry only. Media placement uses the separate Glass volume.';
+  const help=document.createElement('p');help.className='studio-panel-hint';help.textContent='Add several objects or import multiple static models. Each layer has its own material and transform. Z controls front/back depth. GLB must contain embedded assets; OBJ imports geometry only. Inside volumes uses every visible layer with Media boundary enabled, plus the enabled Glass volume.';
   this.container.append(add,help,this.list,this.editor,status);this.refreshList();
  }
  private button(label:string,action:()=>void):HTMLButtonElement{const b=document.createElement('button');b.type='button';b.className='background-button';b.textContent=label;b.addEventListener('click',action);return b;}
@@ -48,11 +48,21 @@ export class ObjectLayerControls {
   const pane=this.pane=new Pane({container:controls,title:'Selected 3D layer'});
   pane.addBinding(layer,'name',{label:'Name'}).on('change',()=>this.refreshList());
   pane.addBinding(layer,'material',{label:'Material',options:{Glass:'Glass',Solid:'Solid'}});
-  pane.addBinding(layer,'color',{label:'Color'});pane.addBinding(layer,'opacity',{label:'Opacity',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'color',{label:'Custom color'}).on('change',()=>{layer.usePalette=false;pane.refresh();});pane.addBinding(layer,'opacity',{label:'Opacity',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'usePalette',{label:'Use palette color'});
+  pane.addBinding(layer,'refraction',{label:'Refraction',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'roughness',{label:'Glass roughness',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'edge',{label:'Edge strength',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'backEdges',{label:'Back edges',min:0,max:1,step:0.05});
+  pane.addBinding(layer,'mediaTarget',{label:'Media boundary'});
+  pane.addBinding(layer,'clipEffects',{label:'Keep effects inside'});
+  pane.addBinding(this.layers,'perspective',{label:'Scene perspective',min:0,max:1,step:0.05});
   pane.addBinding(layer,'x',{label:'Position X',min:-1.5,max:1.5,step:0.01});pane.addBinding(layer,'y',{label:'Position Y',min:-1.5,max:1.5,step:0.01});
   pane.addBinding(layer,'z',{label:'Depth Z',min:-3,max:2,step:0.05});
-  for(const key of ['scaleX','scaleY','scaleZ'] as const)pane.addBinding(layer,key,{min:0.1,max:4,step:0.05});
+  for(const key of ['scaleX','scaleY','scaleZ'] as const)pane.addBinding(layer,key,{label: key==='scaleX'?'Width (scale)':key==='scaleY'?'Height (scale)':'Depth (scale)',min:0.1,max:4,step:0.05});
   for(const key of ['rotateX','rotateY','rotateZ'] as const)pane.addBinding(layer,key,{min:-180,max:180,step:1});
+  pane.addButton({title:'Front view / show depth'}).on('click',()=>{Object.assign(layer,{rotateX:0,rotateY:0,rotateZ:0});this.layers.perspective=0.8;this.layers.apply(layer);pane.refresh();});
+  pane.addButton({title:'Center / reset size'}).on('click',()=>{Object.assign(layer,{x:0,y:0,z:0,scaleX:1,scaleY:1,scaleZ:1});this.layers.apply(layer);pane.refresh();});
   pane.on('change',()=>this.layers.apply(layer));
  }
 }

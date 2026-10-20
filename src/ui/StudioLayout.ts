@@ -4,7 +4,7 @@ import type { ControlPanel, ParameterSection } from './ControlPanel';
 export class StudioLayout {
   constructor(app: HTMLElement, canvas: HTMLCanvasElement, modes: HTMLElement, parameters: HTMLElement,
     settingsButton: HTMLButtonElement, presentationButton: HTMLButtonElement, camera: HTMLElement[],
-    background: HTMLElement[], sound: HTMLElement, recording: HTMLElement, status: HTMLElement, panel: ControlPanel, objects: HTMLElement) {
+    background: HTMLElement[], sound: HTMLElement, recording: HTMLElement, status: HTMLElement, panel: ControlPanel, objects: HTMLElement, foreground: HTMLElement[]) {
     app.classList.add('studio-layout', 'studio-menu-layout');
     const stage=document.createElement('main');stage.className='studio-stage';
     stage.setAttribute('aria-label','Live artwork preview');stage.append(canvas);app.prepend(stage);
@@ -30,6 +30,7 @@ export class StudioLayout {
       { title:'Glass', hint:'Glass shape, position, depth and color.', nodes:[parameters], parameter:'glass' },
       { title:'3D Layers', hint:'Import, duplicate and arrange solid or glass objects.', nodes:[objects] },
       { title:'Background', hint:'Background sources, video playback and edits.', nodes:background },
+      { title:'Foreground', hint:'Self View, image or video in front of the background. Placement is independent.', nodes:foreground },
       { title:'Sound', hint:'Motion voices, audio delay, music and microphone.', nodes:[sound] },
       { title:'Recording', hint:'Record your artwork or export a still.', nodes:[recording] },
       { title:'Camera', hint:'Camera, tracking and self view.', nodes:camera },

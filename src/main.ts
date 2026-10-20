@@ -56,6 +56,13 @@ const poseTracker = new PoseTracker(video);
 const audioReactor = new AudioReactor();
 const appState = new AppState();
 const backgroundLayer = new BackgroundLayer(sceneManager);
+const foregroundLayer = new BackgroundLayer(sceneManager, false);
+// Media-based modes follow the foreground when present; source controls remain independent.
+const effectMediaSource = new Proxy(backgroundLayer, { get(target, property) {
+  const source = foregroundLayer.mode !== 'none' ? foregroundLayer : target;
+  const value = Reflect.get(source, property);
+  return typeof value === 'function' ? value.bind(source) : value;
+} });
 
 const fillMode = new FillMode(sceneManager, appState);
 const danceMode = new DanceMode(sceneManager, appState);
@@ -67,19 +74,19 @@ const natureMode = new NatureMode(sceneManager, appState);
 const lightningMode = new LightningMode(sceneManager, appState);
 const abstractFillMode = new AbstractFillMode(sceneManager, appState);
 const abstractGrowMode = new AbstractGrowMode(sceneManager, appState);
-const dissolveMode = new DissolveMode(sceneManager, video, backgroundLayer);
-const dissolveLinesMode = new DissolveLinesMode(sceneManager, video, backgroundLayer, appState);
+const dissolveMode = new DissolveMode(sceneManager, video, effectMediaSource);
+const dissolveLinesMode = new DissolveLinesMode(sceneManager, video, effectMediaSource, appState);
 const mandalaMode = new MandalaMode(sceneManager);
-const pixelMeltMode = new PixelMeltMode(sceneManager, video, backgroundLayer);
-const glitchMode = new GlitchMode(sceneManager, video, backgroundLayer);
-const glitchMonoMode = new GlitchMonoMode(sceneManager, video, backgroundLayer);
-const glitchLinesMode = new GlitchLinesMode(sceneManager, video, backgroundLayer);
-const distortGlitchMode = new DistortGlitchMode(sceneManager, video, backgroundLayer);
+const pixelMeltMode = new PixelMeltMode(sceneManager, video, effectMediaSource);
+const glitchMode = new GlitchMode(sceneManager, video, effectMediaSource);
+const glitchMonoMode = new GlitchMonoMode(sceneManager, video, effectMediaSource);
+const glitchLinesMode = new GlitchLinesMode(sceneManager, video, effectMediaSource);
+const distortGlitchMode = new DistortGlitchMode(sceneManager, video, effectMediaSource);
 const chromaMode = new ChromaMode(sceneManager, appState);
 const chromaGeoMode = new ChromaGeoMode(sceneManager, appState);
 const sketchMode = new SketchMode(sceneManager, appState);
-const rippleMode = new RippleMode(sceneManager, video, backgroundLayer);
-const revealMode = new RevealMode(sceneManager, video, backgroundLayer);
+const rippleMode = new RippleMode(sceneManager, video, effectMediaSource);
+const revealMode = new RevealMode(sceneManager, video, effectMediaSource);
 const surfaces = { geoPortal: new BodyFxMode(sceneManager, 3), geoOrbits: new BodyFxMode(sceneManager, 4), geoFracture: new BodyFxMode(sceneManager, 5), bodyFlames: new BodyFxMode(sceneManager, 0), bodyRibbons: new BodyFxMode(sceneManager, 1), bodyPrism: new BodyFxMode(sceneManager, 2), verticalLines: new SurfaceMode(sceneManager, appState, 0), scribbleGlitch: new ChaosMode(sceneManager, 0), numberGlitch: new ChaosMode(sceneManager, 1), chaosMix: new ChaosMode(sceneManager, 2), dualTexture: new SurfaceMode(sceneManager, appState, 2), dualTextureReverse: new SurfaceMode(sceneManager, appState, 3) };
 const motionSound = new MotionSound();
 const modeController = new ModeController(
@@ -141,6 +148,7 @@ controlBar.className = 'control-bar';
 appRoot.appendChild(controlBar);
 
 const backgroundControls = new BackgroundControls(backgroundLayer, () => (video.srcObject ? video : null));
+const foregroundControls = new BackgroundControls(foregroundLayer, () => (video.srcObject ? video : null), 'Foreground');
 backgroundControls.container.classList.add('control-bar-section');
 controlBar.appendChild(backgroundControls.container);
 backgroundControls.backdropContainer.classList.add('control-bar-section');
@@ -155,8 +163,8 @@ const selfViewToggleButton = document.createElement('button');
 selfViewToggleButton.className = 'self-view-toggle-button';
 selfViewToggleButton.textContent = 'Self View';
 selfViewToggleButton.addEventListener('click', () => {
-  if (backgroundLayer.mode === 'camera') backgroundControls.noneButton.click();
-  else backgroundControls.cameraButton.click();
+  if (foregroundLayer.mode === 'camera') foregroundControls.noneButton.click();
+  else foregroundControls.cameraButton.click();
 });
 appRoot.appendChild(selfViewToggleButton);
 
@@ -178,11 +186,12 @@ const renderFrame = (): void => {
   const inkOverride = chaosActive && appState.chaos.appearance !== 'Color';
   const monoPalette = ['White Paper / Black Ink', 'X-Ray Monochrome', 'Silver Static', 'Graphite Pencil'].includes(appState.paletteName);
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
-  sceneManager.setMediaScope(backgroundLayer.placement === 'Inside glass' && appState.glassVolume.enabled, backgroundLayer.mode !== 'none');
+  sceneManager.objectLayers.setPalette(appState.palette[3]!);
   backgroundLayer.update(inkOverride ? pencilInk : monoPalette, inkOverride || appState.paletteName.startsWith('Paper /'));
+  foregroundLayer.update();
   modeController.syncVisibility();
   controlPanel.syncVisibility();
-  selfViewToggleButton.classList.toggle('active', backgroundLayer.mode === 'camera');
+  selfViewToggleButton.classList.toggle('active', foregroundLayer.mode === 'camera');
 
   // Max-blend (not add) so sound only ever boosts the existing movement-energy signal instead of
   // compounding across frames — every mode reacts to this same poseTracker.state.energy value
@@ -283,13 +292,14 @@ const renderFrame = (): void => {
       revealMode.update(poseTracker, appState, lastElapsed, lastDt);
       break;
   }
-  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, appState.glassVolume.enabled]));
+  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
+  sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);
   sceneManager.render();
 };
 
-for (const mode of [pixelMeltMode, glitchMode, glitchMonoMode, glitchLinesMode, distortGlitchMode, rippleMode, revealMode]) clipMediaMaterial(mode.material, sceneManager.mediaUniforms);
+for (const mode of [pixelMeltMode, glitchMode, glitchMonoMode, glitchLinesMode, distortGlitchMode, rippleMode, revealMode]) clipMediaMaterial(mode.material, sceneManager.effectMediaUniforms);
 
 const stillExporter = new StillExporter(sceneManager);
 const recordingControls = new RecordingControls(canvas, stillExporter, renderFrame, audioReactor, sceneManager, () => { motionSound.mix(audioReactor.audioStream); return motionSound.stream ?? audioReactor.audioStream; });
@@ -344,7 +354,7 @@ appRoot.appendChild(cameraPicker.container);
 new StudioLayout(appRoot, canvas, modeSwitcher.container, uiRoot, settingsToggleButton, presentationToggleButton,
   [video, pauseButton, selfViewToggleButton, cameraPicker.container],
   [backgroundControls.container, backgroundControls.backdropContainer, backgroundControls.editContainer],
-  soundControls.container, recordingControls.container, statusEl, controlPanel, new ObjectLayerControls(sceneManager.objectLayers).container);
+  soundControls.container, recordingControls.container, statusEl, controlPanel, new ObjectLayerControls(sceneManager.objectLayers).container, [foregroundControls.container, foregroundControls.backdropContainer, foregroundControls.editContainer]);
 
 const startScreen = new StartScreen();
 appRoot.appendChild(startScreen.container);

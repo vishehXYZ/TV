@@ -137,7 +137,7 @@ export class ControlPanel {
     glassFolder.addBinding(glass, 'edge', { label: 'Edge strength', min: 0, max: 2, step: 0.05 });
     glassFolder.addBinding(glass, 'usePalette', { label: 'Use palette color' });
     glassFolder.addBinding(glass, 'color', { label: 'Custom glass color' }).on('change', () => { glass.usePalette = false; this.pane.refresh(); });
-    glassFolder.addBinding(glass, 'clip', { label: 'Keep art inside' });
+    glassFolder.addBinding(glass, 'clip', { label: 'Keep effects inside' });
     glassFolder.addButton({ title: 'Front view / show depth' }).on('click', () => {
       Object.assign(glass, { rotateX: 0, rotateY: 0, rotateZ: 0, perspective: 0.8, rearEdges: 0.55 });
       this.pane.refresh();

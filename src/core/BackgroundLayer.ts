@@ -18,6 +18,7 @@ export class BackgroundLayer {
   readonly mesh: THREE.Mesh;
 
   private sceneManager: SceneManager;
+  private drivesBackdrop: boolean;
   private material: BackgroundMaterial;
   private currentTexture: THREE.Texture | null = null;
   private ownedVideoEl: HTMLVideoElement | null = null;
@@ -37,20 +38,22 @@ export class BackgroundLayer {
   }
   resetTrim(): void { this.trimStart = 0; this.trimEnd = Infinity; }
   mode: BackgroundMode = 'none';
-  placement: 'Full background' | 'Inside glass' = 'Full background';
+  placement: 'Full background' | 'Inside glass' | 'Inside volumes' = 'Full background';
   solidColor: 'black' | 'white' = 'black';
   setSolidColor(color: 'black' | 'white'): void { this.solidColor = color; }
 
-  constructor(sceneManager: SceneManager) {
+  constructor(sceneManager: SceneManager, drivesBackdrop = true) {
+    this.drivesBackdrop = drivesBackdrop;
     this.sceneManager = sceneManager;
     const geometry = new THREE.PlaneGeometry(2, 2);
     this.material = new BackgroundMaterial();
-    clipMediaMaterial(this.material, sceneManager.mediaUniforms);
+    clipMediaMaterial(this.material, drivesBackdrop ? sceneManager.mediaUniforms : sceneManager.foregroundUniforms);
     this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.position.z = -0.99;
-    this.mesh.renderOrder = -1000;
+    this.mesh.position.z = drivesBackdrop ? -0.99 : -0.98;
+    this.mesh.renderOrder = drivesBackdrop ? -1000 : -999;
     this.mesh.visible = false;
     sceneManager.scene.add(this.mesh);
+    sceneManager.registerMediaLayer?.(this.mesh);
   }
 
   /** Uses the same <video> element the app already streams the webcam into (no duplicate getUserMedia request). */
@@ -170,7 +173,7 @@ export class BackgroundLayer {
   }
 
   update(monochrome = false, strongInk = false): void {
-    this.sceneManager.setWhiteBackdrop(this.solidColor === 'white', monochrome, strongInk);
+    if (this.drivesBackdrop) this.sceneManager.setWhiteBackdrop(this.solidColor === 'white', monochrome, strongInk);
     if (this.mode === 'none') return;
     const activeVideo = this.ownedVideoEl ?? this.sharedVideoEl;
     if (this.ownedVideoEl && (this.ownedVideoEl.currentTime >= this.trimEnd || this.ownedVideoEl.currentTime < this.trimStart)) this.ownedVideoEl.currentTime = this.trimStart;

@@ -30,7 +30,7 @@ export class BackgroundControls {
   private dimButtons: HTMLButtonElement[] = [];
   private filterButtons: HTMLButtonElement[] = [];
 
-  constructor(background: BackgroundLayer, getCameraVideo: () => HTMLVideoElement | null) {
+  constructor(background: BackgroundLayer, getCameraVideo: () => HTMLVideoElement | null, kind: 'Background' | 'Foreground' = 'Background') {
     this.background = background;
     this.getCameraVideo = getCameraVideo;
 
@@ -44,7 +44,7 @@ export class BackgroundControls {
 
     const label = document.createElement('span');
     label.className = 'background-label';
-    label.textContent = 'Background';
+    label.textContent = kind;
     this.container.appendChild(label);
 
     const noneBtn = this.makeButton('None', () => {
@@ -55,7 +55,7 @@ export class BackgroundControls {
       speedRow.style.display = 'none';
     });
 
-    const cameraBtn = this.makeButton('Self View', () => {
+    const cameraBtn = this.makeButton(kind === 'Foreground' ? 'Self View' : 'Camera background', () => {
       const video = this.getCameraVideo();
       if (!video) {
         alert('Click "Enable Camera" first, then choose Self View again.');
@@ -135,14 +135,15 @@ export class BackgroundControls {
       });
     }
     solidRow.append(solidLabel, blackButton, whiteButton);
+    if(kind === 'Foreground') solidRow.style.display = 'none';
     const placementRow = document.createElement('div'); placementRow.className = 'control-row';
     const placementLabel = document.createElement('label'); placementLabel.textContent = 'Media placement';
     const placement = document.createElement('select'); placement.className = 'background-button';
-    for (const value of ['Full background', 'Inside glass'] as const) { const option = document.createElement('option'); option.value = value; option.textContent = value; placement.append(option); }
+    for (const value of ['Full background', 'Inside volumes'] as const) { const option = document.createElement('option'); option.value = value; option.textContent = value === 'Full background' ? (kind === 'Foreground' ? 'Full frame' : 'Full background') : 'Inside Glass + 3D layers'; placement.append(option); }
     placement.value = background.placement;
     placement.addEventListener('change', () => { background.placement = placement.value as typeof background.placement; });
     placementRow.append(placementLabel, placement);
-    const placementHint = document.createElement('small'); placementHint.textContent = 'Inside glass needs Enable glass. Applies to Self View, Image and Video. Outside uses Black / White.';
+    const placementHint = document.createElement('small'); placementHint.textContent = 'Placement is independent for this source. Inside uses the enabled Glass volume and visible 3D layers with Media boundary on.';
     this.container.append(sourceRow, solidRow, placementRow, placementHint, opacityRow);
 
     const dimLabel = document.createElement('span');

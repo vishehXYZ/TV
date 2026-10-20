@@ -78,7 +78,7 @@ export type VisualMode =
 
 export class AppState {
   mode: VisualMode = 'fill';
-  glassVolume = { enabled: false, shape: 'Egg', x: 0, y: 0, width: 1.3, height: 1.8, depth: 1, rotateX: 0, rotateY: 18, rotateZ: 0, opacity: 0.55, refraction: 0.35, edge: 0.9, color: '#a8dce8', usePalette: false, clip: false };
+  glassVolume = { enabled: false, shape: 'Box', x: 0, y: 0, width: 1.3, height: 1.8, depth: 1, rotateX: 0, rotateY: 18, rotateZ: 0, opacity: 0.55, refraction: 0.35, edge: 0.9, color: '#dddddd', perspective: 0.8, rearEdges: 0.55, usePalette: false, clip: false };
   motionDelay = { enabled: false, duration: 2, strength: 0.65, echoes: 6 };
   bodyFx = { speed: 1, intensity: 1, scale: 1, usePalette: false };
   chaos = { density: 1, speed: 1, glitch: 0.65, usePalette: false, coverage: 'Full space', appearance: 'Color', motion: 1, showBody: false, cuts: false };

@@ -117,12 +117,18 @@ export class ControlPanel {
     glassFolder.addBinding(glass, 'y', { label: 'Position Y', min: -1, max: 1, step: 0.01 });
     for (const key of ['width', 'height', 'depth'] as const) glassFolder.addBinding(glass, key, { min: 0.2, max: 4, step: 0.05 });
     for (const key of ['rotateX', 'rotateY', 'rotateZ'] as const) glassFolder.addBinding(glass, key, { min: -180, max: 180, step: 1 });
+    glassFolder.addBinding(glass, 'perspective', { label: '3D perspective', min: 0, max: 1, step: 0.05 });
+    glassFolder.addBinding(glass, 'rearEdges', { label: 'Back edges', min: 0, max: 1, step: 0.05 });
     glassFolder.addBinding(glass, 'opacity', { label: 'Glass opacity', min: 0, max: 1, step: 0.05 });
     glassFolder.addBinding(glass, 'refraction', { label: 'Refraction', min: 0, max: 1, step: 0.05 });
     glassFolder.addBinding(glass, 'edge', { label: 'Edge strength', min: 0, max: 2, step: 0.05 });
     glassFolder.addBinding(glass, 'usePalette', { label: 'Use palette color' });
-    glassFolder.addBinding(glass, 'color', { label: 'Glass tint' });
+    glassFolder.addBinding(glass, 'color', { label: 'Custom glass color' }).on('change', () => { glass.usePalette = false; this.pane.refresh(); });
     glassFolder.addBinding(glass, 'clip', { label: 'Keep art inside' });
+    glassFolder.addButton({ title: 'Front view / show depth' }).on('click', () => {
+      Object.assign(glass, { rotateX: 0, rotateY: 0, rotateZ: 0, perspective: 0.8, rearEdges: 0.55 });
+      this.pane.refresh();
+    });
     glassFolder.addButton({ title: 'Center / reset shape' }).on('click', () => {
       Object.assign(glass, { x: 0, y: 0, width: 1.3, height: 1.8, depth: 1, rotateX: 0, rotateY: 18, rotateZ: 0 });
       this.pane.refresh();

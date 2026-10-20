@@ -798,3 +798,6 @@ body.presentation-mode .studio-stage { inset: 0; }
   .studio-toolbar strong { margin-right: auto; font-size: 11px; }
   body.presentation-mode .studio-layout .studio-stage { inset: 0; }
 }
+
+.studio-layout .motion-sound-settings { width: 100%; min-width: 0; }
+.studio-layout .motion-sound-settings .tp-dfwv { position: static; width: 100%; max-width: none; }

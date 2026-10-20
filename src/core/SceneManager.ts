@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LineWeightPass } from './LineWeightPass';
 import { GlassVolumePass } from './GlassVolumePass';
 import { MotionDelayPass } from './MotionDelayPass';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -18,6 +19,7 @@ export class SceneManager {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
+  readonly lineWeightPass: LineWeightPass;
   readonly glassVolumePass: GlassVolumePass;
   readonly motionDelayPass: MotionDelayPass;
   readonly bloomPass: UnrealBloomPass;
@@ -43,6 +45,8 @@ export class SceneManager {
     this.composer = new EffectComposer(this.renderer, renderTarget);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
+    this.lineWeightPass = new LineWeightPass();
+    this.composer.addPass(this.lineWeightPass);
     this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.55, 0.72);
     this.composer.addPass(this.bloomPass);
     this.motionDelayPass = new MotionDelayPass();

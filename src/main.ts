@@ -2,6 +2,7 @@ import { BodyFxMode } from './modes/BodyFxMode';
 import { ChaosMode } from './modes/ChaosMode';
 import { StudioLayout } from './ui/StudioLayout';
 import { SurfaceMode } from './modes/SurfaceMode';
+import { MotionSoundControls } from './ui/MotionSoundControls';
 import { MotionSound } from './tracking/MotionSound';
 import Stats from 'stats.js';
 import './style.css';
@@ -163,6 +164,7 @@ controlBar.appendChild(soundControls.container);
 const motionButton = document.createElement('button'); motionButton.className = 'background-button'; motionButton.textContent='Motion Sound Off';
 motionButton.addEventListener('click', async () => { try { if(motionSound.enabled) motionSound.disable(); else await motionSound.enable(); motionButton.textContent=motionSound.enabled ? 'Motion Sound On':'Motion Sound Off'; } catch(e) { alert((e as Error).message); } });
 soundControls.container.append(motionButton);
+soundControls.container.append(new MotionSoundControls(motionSound).container);
 
 let lastElapsed = 0;
 let lastDt = 1 / 60;
@@ -279,6 +281,7 @@ const renderFrame = (): void => {
   }
   sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.mode === 'none' && backgroundLayer.solidColor === 'white', appState.palette[3]!);
+  sceneManager.lineWeightPass.configure(appState.lineWeight);
   sceneManager.render();
 };
 

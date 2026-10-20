@@ -109,6 +109,10 @@ export class ControlPanel {
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
     this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
 
+    const lineFolder = this.pane.addFolder({ title: 'Line weight (all modes)' });
+    lineFolder.addBinding(appState, 'lineWeight', { label: 'Thickness', min: 0.3, max: 3, step: 0.05 });
+    lineFolder.addButton({ title: 'Reset thickness' }).on('click', () => { appState.lineWeight = 1; this.pane.refresh(); });
+
     const glassFolder = this.pane.addFolder({ title: 'Glass Volume (all modes)', expanded: false });
     const glass = appState.glassVolume;
     glassFolder.addBinding(glass, 'enabled', { label: 'Enable glass' });

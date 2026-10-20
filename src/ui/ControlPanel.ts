@@ -8,8 +8,13 @@ import { PALETTE_PRESETS } from '../core/AppState';
  * folders only affect specific modes (e.g. "Pattern (Abstract)" does nothing outside Abstract) — those
  * are hidden unless the matching mode is active, via syncVisibility(), so a slider that currently does
  * nothing isn't sitting on screen looking broken. */
+export type ParameterSection = 'palette' | 'effects' | 'glow' | 'glass' | 'trace' | 'lines';
+
 export class ControlPanel {
+  private section: ParameterSection = 'effects';
+  private sections: { folder: FolderApi; section: ParameterSection }[] = [];
   onClearTrace?: () => void;
+  private emptyMessage: HTMLParagraphElement;
   private pane: Pane;
   private paletteHex: Record<string, string>;
   private appState: AppState;
@@ -21,8 +26,12 @@ export class ControlPanel {
   constructor(container: HTMLElement, appState: AppState, bloomPass: UnrealBloomPass) {
     this.appState = appState;
     this.pane = new Pane({ container, title: 'Instrument' });
+    this.emptyMessage = document.createElement('p');
+    this.emptyMessage.className = 'studio-panel-hint';
+    this.emptyMessage.textContent = 'This mode has no additional effect controls. Use Palette, Glow, Lines, Trace or Glass above.';
+    container.append(this.emptyMessage);
 
-    const paletteFolder = this.pane.addFolder({ title: 'Palette' });
+    const paletteFolder = this.addSectionFolder('Palette', 'palette');
 
     paletteFolder
       .addBinding({ preset: appState.paletteName }, 'preset', {
@@ -52,7 +61,7 @@ export class ControlPanel {
     });
 
     // Only Flurix actually reads these — Luns/Code never did, despite the old folder title implying otherwise.
-    const patternFolder = this.pane.addFolder({ title: 'Pattern (Flurix)' });
+    const patternFolder = this.addSectionFolder('Pattern (Flurix)', 'effects');
     patternFolder.addBinding(appState.girih, 'density', { min: 2, max: 16, step: 0.5 });
     patternFolder.addBinding(appState.girih, 'symmetry', { min: 5, max: 14, step: 1 });
     patternFolder.addBinding(appState.girih, 'sharpness', { min: 0.5, max: 6, step: 0.1 });
@@ -64,15 +73,15 @@ export class ControlPanel {
     // strokeWidth is the one girih param Luns' star motif also reads (see DanceMode) — split out
     // into its own honestly-labeled folder rather than living in a "Fill/Dance/Code" folder where
     // it was the only slider out of seven that actually did anything for a second mode.
-    const lineWidthFolder = this.pane.addFolder({ title: 'Line Width (Flurix + Luns)' });
+    const lineWidthFolder = this.addSectionFolder('Line Width (Flurix + Luns)', 'effects');
     lineWidthFolder.addBinding(appState.girih, 'strokeWidth', { min: 0.01, max: 0.2, step: 0.005 });
     this.modeFolders.push({ folder: lineWidthFolder, modes: ['fill', 'dance'] });
 
-    const sketchFolder = this.pane.addFolder({ title: 'Line Thickness (Sketch)' });
+    const sketchFolder = this.addSectionFolder('Line Thickness (Sketch)', 'effects');
     sketchFolder.addBinding(appState.sketch, 'lineThickness', { min: 0.3, max: 3, step: 0.05 });
     this.modeFolders.push({ folder: sketchFolder, modes: ['sketch'] });
 
-    const scriptFolder = this.pane.addFolder({ title: 'Script Style' });
+    const scriptFolder = this.addSectionFolder('Script Style', 'effects');
     scriptFolder.addBinding(appState, 'scriptLanguage', {
       label: 'language',
       options: { Arabic: 'arabic', Hebrew: 'hebrew', Russian: 'russian', Japanese: 'japanese' },
@@ -80,7 +89,7 @@ export class ControlPanel {
     scriptFolder.addBinding(appState, 'script3D', { label: '3D' });
     this.modeFolders.push({ folder: scriptFolder, modes: ['script', 'scriptInside'] });
 
-    const abstractFolder = this.pane.addFolder({ title: 'Pattern (Abstract)' });
+    const abstractFolder = this.addSectionFolder('Pattern (Abstract)', 'effects');
     abstractFolder.addBinding(appState.abstract, 'scale', { min: 0.3, max: 4, step: 0.05 });
     abstractFolder.addBinding(appState.abstract, 'warpStrength', { min: 0, max: 5, step: 0.05 });
     abstractFolder.addBinding(appState.abstract, 'flowSpeed', { min: 0, max: 4, step: 0.05 });
@@ -90,7 +99,7 @@ export class ControlPanel {
 
     // A single post-process pass applied after every mode is composited, so this one control
     // tames "too much" glow/bloom everywhere at once instead of needing a knob per mode.
-    const chaosFolder = this.pane.addFolder({ title: 'Chaos' });
+    const chaosFolder = this.addSectionFolder('Chaos', 'effects');
     chaosFolder.addBinding(appState.chaos, 'appearance', { label: 'Ink style', options: { Color: 'Color', 'Red ink': 'Red ink', 'Graphite pencil': 'Graphite pencil' } });
     chaosFolder.addBinding(appState.chaos, 'motion', { label: 'Body reaction', min: 0, max: 2, step: 0.1 });
     chaosFolder.addBinding(appState.chaos, 'showBody', { label: 'Body outline' });
@@ -102,18 +111,18 @@ export class ControlPanel {
     chaosFolder.addBinding(appState.chaos, 'glitch', { min: 0, max: 1, step: 0.05 });
     this.modeFolders.push({ folder: chaosFolder, modes: ['scribbleGlitch', 'numberGlitch', 'chaosMix'] });
 
-    const bodyFolder = this.pane.addFolder({ title: 'Body FX' });
+    const bodyFolder = this.addSectionFolder('Body FX', 'effects');
     bodyFolder.addBinding(appState.bodyFx, 'usePalette', { label: 'Use selected palette' });
     bodyFolder.addBinding(appState.bodyFx, 'speed', { min: 0.2, max: 3, step: 0.1 });
     bodyFolder.addBinding(appState.bodyFx, 'intensity', { min: 0.3, max: 2, step: 0.1 });
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
     this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
 
-    const lineFolder = this.pane.addFolder({ title: 'Line weight (all modes)' });
+    const lineFolder = this.addSectionFolder('Line weight (all modes)', 'lines');
     lineFolder.addBinding(appState, 'lineWeight', { label: 'Thickness', min: 0.3, max: 3, step: 0.05 });
     lineFolder.addButton({ title: 'Reset thickness' }).on('click', () => { appState.lineWeight = 1; this.pane.refresh(); });
 
-    const glassFolder = this.pane.addFolder({ title: 'Glass Volume (all modes)', expanded: false });
+    const glassFolder = this.addSectionFolder('Glass Volume (all modes)', 'glass');
     const glass = appState.glassVolume;
     glassFolder.addBinding(glass, 'enabled', { label: 'Enable glass' });
     glassFolder.addBinding(glass, 'shape', { label: 'Shape', options: { Egg: 'Egg', Sphere: 'Sphere', Box: 'Box' } });
@@ -138,14 +147,14 @@ export class ControlPanel {
       this.pane.refresh();
     });
 
-    const delayFolder = this.pane.addFolder({ title: 'Motion Trace / Delay (all modes)' });
+    const delayFolder = this.addSectionFolder('Motion Trace / Delay (all modes)', 'trace');
     delayFolder.addBinding(appState.motionDelay, 'enabled', { label: 'Enable delay' });
     delayFolder.addBinding(appState.motionDelay, 'duration', { label: 'Trail seconds', min: 0.2, max: 5, step: 0.1 });
     delayFolder.addBinding(appState.motionDelay, 'strength', { label: 'Echo strength', min: 0, max: 1, step: 0.05 });
     delayFolder.addBinding(appState.motionDelay, 'echoes', { label: 'Echo copies', min: 2, max: 8, step: 1 });
     delayFolder.addButton({ title: 'Clear trace' }).on('click', () => this.onClearTrace?.());
 
-    const glowFolder = this.pane.addFolder({ title: 'Glow (all modes)' });
+    const glowFolder = this.addSectionFolder('Glow (all modes)', 'glow');
     glowFolder.addBinding(bloomPass, 'strength', { min: 0, max: 3, step: 0.05, label: 'intensity' });
     glowFolder.addBinding(bloomPass, 'radius', { min: 0, max: 1, step: 0.01, label: 'spread' });
     glowFolder.addBinding(bloomPass, 'threshold', { min: 0, max: 1, step: 0.01, label: 'threshold' });
@@ -159,9 +168,24 @@ export class ControlPanel {
   syncVisibility(): void {
     if (this.appState.mode === this.lastMode) return;
     this.lastMode = this.appState.mode;
-    for (const { folder, modes } of this.modeFolders) {
-      folder.hidden = !modes.includes(this.appState.mode);
+    for (const entry of this.sections) {
+      const modeRule = this.modeFolders.find(item => item.folder === entry.folder);
+      entry.folder.hidden = entry.section !== this.section || !!(modeRule && !modeRule.modes.includes(this.appState.mode));
     }
+    this.emptyMessage.hidden = this.sections.some(entry => !entry.folder.hidden);
+  }
+
+  private addSectionFolder(title: string, section: ParameterSection): FolderApi {
+    const folder = this.pane.addFolder({ title, expanded: true });
+    this.sections.push({ folder, section });
+    return folder;
+  }
+
+  showSection(section: ParameterSection): void {
+    this.section = section;
+    this.lastMode = null;
+    for (const item of this.sections) if (item.section === section) item.folder.expanded = true;
+    this.syncVisibility();
   }
 
   private syncPaletteHex(): void {

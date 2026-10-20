@@ -338,7 +338,7 @@ appRoot.appendChild(cameraPicker.container);
 new StudioLayout(appRoot, canvas, modeSwitcher.container, uiRoot, settingsToggleButton, presentationToggleButton,
   [video, pauseButton, selfViewToggleButton, cameraPicker.container],
   [backgroundControls.container, backgroundControls.backdropContainer, backgroundControls.editContainer],
-  soundControls.container, recordingControls.container, statusEl);
+  soundControls.container, recordingControls.container, statusEl, controlPanel);
 
 const startScreen = new StartScreen();
 appRoot.appendChild(startScreen.container);

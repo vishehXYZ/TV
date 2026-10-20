@@ -801,3 +801,35 @@ body.presentation-mode .studio-stage { inset: 0; }
 
 .studio-layout .motion-sound-settings { width: 100%; min-width: 0; }
 .studio-layout .motion-sound-settings .tp-dfwv { position: static; width: 100%; max-width: none; }
+
+/* Direct-access desktop menu: one selected panel, without nested section accordions. */
+.studio-menu-layout { --dock-width: 320px; --toolbar-height: 96px; }
+.studio-menu-layout .studio-toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; }
+.studio-toolbar-top { height: 44px; min-height: 44px; display: flex; gap: 12px; align-items: center; padding: 0 14px; }
+.studio-toolbar-top > span { margin-right: auto; color: #aeb6c5; font-size: 12px; }
+.studio-menu { display: flex; align-items: stretch; gap: 3px; padding: 0 10px 6px; overflow-x: auto; min-height: 50px; scrollbar-width: thin; }
+.studio-menu-button { flex: 0 0 auto; padding: 10px 13px; font: 600 15px/1.2 system-ui,sans-serif; color: #e6e9f1; background: transparent; border: 1px solid transparent; border-radius: 5px; cursor: pointer; }
+.studio-menu-button:hover { background: #282e3c; }
+.studio-menu-button[aria-selected='true'] { background: #333d50; border-color: #a99665; color: #ffe2a0; }
+.studio-menu-button:focus-visible { outline: 2px solid #eed299; outline-offset: -2px; }
+.studio-menu-layout .studio-dock { padding: 16px 12px; }
+.studio-panel-title { font: 650 21px/1.2 system-ui,sans-serif; margin: 0 0 8px; color: #f4e3b8; }
+.studio-panel-hint { font: 13px/1.5 system-ui,sans-serif; color: #b7bfce; margin: 0 0 18px; }
+.studio-panel-content { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.studio-menu-layout .mode-switcher { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.studio-menu-layout .mode-button { padding: 12px 7px; font-size: 14px; }
+.studio-menu-layout .style-pill { font-size: 13px; padding: 10px; }
+.studio-menu-layout .background-button { padding: 10px 11px; font-size: 13px; }
+.studio-menu-layout .studio-dock .tp-rotv { font-size: 13px; --bs-br: 5px; --bld-vw: 130px; --cnt-usz: 26px; }
+.studio-menu-layout #ui-root .tp-rotv > .tp-rotv_b { display: none; }
+.studio-menu-layout .sound-controls { width: 100%; }
+@media(max-width:680px){
+ .studio-menu-layout { --dock-width: 0px; }
+ .studio-menu-layout .studio-stage { bottom: 46%; }
+ .studio-menu-layout .studio-dock { top: 54%; width: 100%; }
+ .studio-menu-layout.controls-hidden .studio-stage { bottom: var(--status-height); }
+ .studio-menu-button { font-size: 14px; padding: 10px 12px; }
+ .studio-toolbar-top > span { display: none; }
+ .studio-toolbar-top strong { margin-right: auto; }
+ .studio-menu-layout .mode-switcher { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}

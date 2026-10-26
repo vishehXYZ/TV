@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import { GenerativeBackground } from './GenerativeBackground';
+import type { PoseState } from '../tracking/PoseState';
 import type { SceneManager } from './SceneManager';
 import { clipMediaMaterial } from './GlassMediaMask';
 import { BackgroundMaterial } from '../generators/background/BackgroundMaterial';
 
-export type BackgroundMode = 'none' | 'camera' | 'image' | 'video';
+export type BackgroundMode = 'none' | 'camera' | 'image' | 'video' | 'generative';
 
 /**
  * Optional fullscreen background behind every visual mode: the live camera
@@ -16,6 +18,17 @@ export type BackgroundMode = 'none' | 'camera' | 'image' | 'video';
  */
 export class BackgroundLayer {
   readonly mesh: THREE.Mesh;
+  generator: GenerativeBackground | null = null;
+  setGenerative(): void {
+    this.clearSource(); this.mode = 'generative';
+    this.generator = new GenerativeBackground(); this.currentTexture = this.generator.texture;
+    this.material.setMap(this.currentTexture); this.mesh.visible = true;
+  }
+  updateGenerative(time: number, pose: PoseState, body: number, audio: number): void {
+    if (this.mode !== 'generative' || !this.generator) return;
+    this.generator.update(time, this.sceneManager.aspect, pose, body, audio);
+    this.sourceAspect = this.sceneManager.aspect;
+  }
 
   private sceneManager: SceneManager;
   private drivesBackdrop: boolean;
@@ -40,7 +53,9 @@ export class BackgroundLayer {
   mode: BackgroundMode = 'none';
   placement: 'Full background' | 'Inside glass' | 'Inside volumes' = 'Full background';
   solidColor: 'black' | 'white' = 'black';
-  setSolidColor(color: 'black' | 'white'): void { this.solidColor = color; }
+  private colorListeners = new Set<(color: 'black' | 'white') => void>();
+  onCanvasColor(listener: (color: 'black' | 'white') => void): void { this.colorListeners.add(listener); listener(this.solidColor); }
+  setSolidColor(color: 'black' | 'white'): void { this.solidColor = color; for(const listener of this.colorListeners) listener(color); }
 
   constructor(sceneManager: SceneManager, drivesBackdrop = true) {
     this.drivesBackdrop = drivesBackdrop;
@@ -157,6 +172,7 @@ export class BackgroundLayer {
   }
 
   private clearSource(): void {
+    this.generator = null;
     this.currentTexture?.dispose();
     this.currentTexture = null;
     this.material.setMap(null);
@@ -218,9 +234,11 @@ export class BackgroundLayer {
     // PixelMelt/GlitchLines/GlitchMono all read backgroundLayer.getTexture().repeat/.offset directly
     // to cover-crop/mirror the SAME background when they sample it themselves, and silently broke
     // (fell back to no crop/no mirror) when this stopped being set here during the color-grading work.
-    texture.repeat.set(-repeatX, repeatY);
-    texture.offset.set(offsetX + repeatX, offsetY);
-    this.material.setRepeatOffset(-repeatX, repeatY, offsetX + repeatX, offsetY);
+    const rx = this.mode === 'generative' ? repeatX : -repeatX;
+    const ox = this.mode === 'generative' ? offsetX : offsetX + repeatX;
+    texture.repeat.set(rx, repeatY);
+    texture.offset.set(ox, offsetY);
+    this.material.setRepeatOffset(rx, repeatY, ox, offsetY);
   }
 
   dispose(): void {

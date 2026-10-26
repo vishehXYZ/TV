@@ -839,3 +839,8 @@ body.presentation-mode .studio-stage { inset: 0; }
 .object-layer-row > button:first-child { flex:1; min-width:0; overflow-wrap:anywhere; text-align:left; }
 .studio-menu-layout .object-layer-controls .tp-dfwv { position:static; width:100%; }
 .studio-menu-layout select { color:#e6e9f1; background:#252b38; max-width:100%; }
+
+.canvas-color-controls { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.canvas-color-controls > span { font-size:12px; color:#c5cbd7; }
+.studio-menu-layout .canvas-color-controls .background-button { font-size:12px; padding:5px 9px; }
+@media(max-width:680px){.studio-toolbar-top { gap:6px; padding:0 6px; }.canvas-color-controls > span { display:none; }.studio-toolbar-top strong { font-size:9px; letter-spacing:0.05em; }.studio-menu-layout .settings-toggle-button { padding:0 6px; font-size:11px; }}

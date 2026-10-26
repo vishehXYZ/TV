@@ -1,3 +1,4 @@
+import { GENERATIVE_STYLES } from '../core/GenerativeBackground';
 import { BackgroundLayer } from '../core/BackgroundLayer';
 
 /** Brightness/contrast/saturation combos for the one-click filter presets — kept alongside the raw
@@ -24,6 +25,7 @@ export class BackgroundControls {
   readonly cameraButton: HTMLButtonElement;
   readonly noneButton: HTMLButtonElement;
 
+  private placementSelect: HTMLSelectElement;
   private background: BackgroundLayer;
   private getCameraVideo: () => HTMLVideoElement | null;
   private buttons: HTMLButtonElement[] = [];
@@ -100,6 +102,40 @@ export class BackgroundControls {
     });
     const videoBtn = this.makeButton('Video', () => videoInput.click());
 
+    const generatorPanel = document.createElement('div');
+    generatorPanel.className = 'background-controls'; generatorPanel.style.display = 'none';
+    const genSelect = (label: string, values: readonly string[], key: 'style' | 'reaction' | 'palette' | 'base') => {
+      const row = document.createElement('label'); row.className = 'opacity-row'; row.textContent = label;
+      const select = document.createElement('select'); select.className = 'background-button';
+      for(const value of values) {const o=document.createElement('option');o.value=value;o.textContent=value;select.append(o);}
+      select.addEventListener('change',()=>{if(background.generator) background.generator.settings[key]=select.value;});
+      row.append(select);generatorPanel.append(row);
+      return select;
+    };
+    const styleSelect=genSelect('Style',GENERATIVE_STYLES,'style');
+    const reactionSelect=genSelect('React to',['Body + Sound','Automatic','Body','Sound'],'reaction');
+    const paletteSelect=genSelect('Colors',['Acid','Electric','Red / Ink','Graphite'],'palette');
+    const baseSelect=genSelect('Base',['Black','White'],'base');
+    const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'sensitivity']> = [];
+    for(const [label,key,min,max] of [['Speed','speed',0,300],['Density','density',25,250],['Size','size',40,200],['Reaction strength','sensitivity',0,300]] as const) {
+      const row=document.createElement('label');row.className='opacity-row';row.textContent=label;
+      const input=document.createElement('input');input.type='range';input.min=String(min);input.max=String(max);input.value='100';
+      const value=document.createElement('span');value.textContent='1.00';
+      input.addEventListener('input',()=>{value.textContent=(Number(input.value)/100).toFixed(2);if(background.generator)background.generator.settings[key]=Number(input.value)/100;});
+      genSliders.push([input,key]);row.append(input,value);generatorPanel.append(row);
+    }
+    const pauseGen=document.createElement('button');pauseGen.className='background-button';pauseGen.textContent='Pause animation';
+    pauseGen.addEventListener('click',()=>{const g=background.generator;if(g){g.settings.paused=!g.settings.paused;pauseGen.textContent=g.settings.paused?'Resume animation':'Pause animation';}});generatorPanel.append(pauseGen);
+    const hint=document.createElement('small');hint.textContent='Body: enable Camera. Sound: start Microphone or Music in Sound. Recorded with the full composition.';generatorPanel.append(hint);
+    const genBtn=this.makeButton('Generative',()=>{
+      background.setGenerative(); const s=background.generator!.settings;
+      s.style=styleSelect.value;s.reaction=reactionSelect.value;s.palette=paletteSelect.value;s.base=baseSelect.value;
+      for(const [input,key] of genSliders)s[key]=Number(input.value)/100;
+      pauseGen.textContent='Pause animation';this.setActive(genBtn);generatorPanel.style.display='flex';
+      opacityRow.style.display='flex';this.editContainer.style.display='flex';speedRow.style.display='none';
+    });
+    this.container.addEventListener('click',()=>{generatorPanel.style.display=background.mode==='generative'?'flex':'none';});
+
     this.cameraButton = cameraBtn;
     this.noneButton = noneBtn;
 
@@ -121,6 +157,7 @@ export class BackgroundControls {
     const sourceRow = document.createElement('div');
     sourceRow.className = 'control-row';
     sourceRow.append(noneBtn, cameraBtn, imageBtn, videoBtn, imageInput, videoInput);
+    if(kind === 'Background') sourceRow.append(genBtn);
     const solidRow = document.createElement('div');
     solidRow.className = 'control-row';
     const solidLabel = document.createElement('span'); solidLabel.textContent = 'Canvas / outside glass';
@@ -134,17 +171,19 @@ export class BackgroundControls {
         whiteButton.classList.toggle('active', color === 'white');
       });
     }
+    this.background.onCanvasColor(color => { blackButton.classList.toggle('active', color === 'black'); whiteButton.classList.toggle('active', color === 'white'); });
     solidRow.append(solidLabel, blackButton, whiteButton);
     if(kind === 'Foreground') solidRow.style.display = 'none';
     const placementRow = document.createElement('div'); placementRow.className = 'control-row';
     const placementLabel = document.createElement('label'); placementLabel.textContent = 'Media placement';
     const placement = document.createElement('select'); placement.className = 'background-button';
     for (const value of ['Full background', 'Inside volumes'] as const) { const option = document.createElement('option'); option.value = value; option.textContent = value === 'Full background' ? (kind === 'Foreground' ? 'Full frame' : 'Full background') : 'Inside Glass + 3D layers'; placement.append(option); }
+    this.placementSelect = placement;
     placement.value = background.placement;
     placement.addEventListener('change', () => { background.placement = placement.value as typeof background.placement; });
     placementRow.append(placementLabel, placement);
-    const placementHint = document.createElement('small'); placementHint.textContent = 'Placement is independent for this source. Inside uses the enabled Glass volume and visible 3D layers with Media boundary on.';
-    this.container.append(sourceRow, solidRow, placementRow, placementHint, opacityRow);
+    const placementHint = document.createElement('small'); placementHint.textContent = 'Placement is independent for this source. Inside uses the enabled Glass volume and visible 3D layers with Image INSIDE on.';
+    this.container.append(sourceRow, solidRow, placementRow, placementHint, opacityRow, generatorPanel);
 
     const dimLabel = document.createElement('span');
     dimLabel.className = 'background-label';
@@ -222,6 +261,8 @@ export class BackgroundControls {
     this.setActive(noneBtn);
     this.setActiveDim(lightBtn);
   }
+
+  placeInsideVolumes(): void { this.background.placement = 'Inside volumes'; this.placementSelect.value = 'Inside volumes'; }
 
   private makeButton(label: string, onClick: () => void): HTMLButtonElement {
     const btn = document.createElement('button');

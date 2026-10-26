@@ -4,7 +4,7 @@ import type { ControlPanel, ParameterSection } from './ControlPanel';
 export class StudioLayout {
   constructor(app: HTMLElement, canvas: HTMLCanvasElement, modes: HTMLElement, parameters: HTMLElement,
     settingsButton: HTMLButtonElement, presentationButton: HTMLButtonElement, camera: HTMLElement[],
-    background: HTMLElement[], sound: HTMLElement, recording: HTMLElement, status: HTMLElement, panel: ControlPanel, objects: HTMLElement, foreground: HTMLElement[]) {
+    background: HTMLElement[], sound: HTMLElement, recording: HTMLElement, status: HTMLElement, panel: ControlPanel, objects: HTMLElement, foreground: HTMLElement[], canvasColor: HTMLElement) {
     app.classList.add('studio-layout', 'studio-menu-layout');
     const stage=document.createElement('main');stage.className='studio-stage';
     stage.setAttribute('aria-label','Live artwork preview');stage.append(canvas);app.prepend(stage);
@@ -13,7 +13,7 @@ export class StudioLayout {
     const brand=document.createElement('strong');brand.textContent='TRACEVERSE';
     const label=document.createElement('span');label.textContent='Live studio';
     settingsButton.textContent='Hide controls';settingsButton.setAttribute('aria-expanded','true');
-    top.append(brand,label,settingsButton,presentationButton);
+    top.append(brand,label,canvasColor,settingsButton,presentationButton);
     const nav=document.createElement('nav');nav.className='studio-menu';nav.setAttribute('aria-label','Studio sections');nav.setAttribute('role','tablist');
     toolbar.append(top,nav);app.append(toolbar);
     const dock=document.createElement('aside');dock.className='studio-dock';dock.id='studio-controls';

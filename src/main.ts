@@ -179,6 +179,7 @@ soundControls.container.append(new MotionSoundControls(motionSound).container);
 let lastElapsed = 0;
 let lastDt = 1 / 60;
 const renderFrame = (): void => {
+  const backgroundBodyEnergy = poseTracker.state.hasDetection ? poseTracker.state.energy : 0;
   motionSound.update(poseTracker.state);
   motionSound.mix(audioReactor.audioStream);
   const chaosActive = ['scribbleGlitch', 'numberGlitch', 'chaosMix'].includes(appState.mode);
@@ -216,6 +217,7 @@ const renderFrame = (): void => {
       poseTracker.state.energy = Math.max(audioReactor.level, audioReactor.kick * 0.8);
     }
   }
+  backgroundLayer.updateGenerative(lastElapsed, poseTracker.state, backgroundBodyEnergy, audioReactor.isActive ? Math.max(audioReactor.level, audioReactor.kick) : 0);
   const audioBands = audioReactor.isActive
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
@@ -351,10 +353,19 @@ pauseButton.addEventListener('click', () => {
 const cameraPicker = new CameraPicker(poseTracker);
 appRoot.appendChild(cameraPicker.container);
 
+const canvasColorControls=document.createElement('div');canvasColorControls.className='canvas-color-controls';
+const canvasColorLabel=document.createElement('span');canvasColorLabel.textContent='Canvas';canvasColorControls.append(canvasColorLabel);
+const canvasColorButtons=new Map<string,HTMLButtonElement>();
+for(const color of ['white','black'] as const){
+  const button=document.createElement('button');button.type='button';button.className='background-button';button.textContent=color==='white'?'White':'Black';
+  button.setAttribute('aria-label',`Set canvas ${color}`);button.addEventListener('click',()=>backgroundLayer.setSolidColor(color));canvasColorControls.append(button);canvasColorButtons.set(color,button);
+}
+backgroundLayer.onCanvasColor(color=>{for(const [name,button] of canvasColorButtons){button.classList.toggle('active',name===color);button.setAttribute('aria-pressed',String(name===color));}});
+
 new StudioLayout(appRoot, canvas, modeSwitcher.container, uiRoot, settingsToggleButton, presentationToggleButton,
   [video, pauseButton, selfViewToggleButton, cameraPicker.container],
   [backgroundControls.container, backgroundControls.backdropContainer, backgroundControls.editContainer],
-  soundControls.container, recordingControls.container, statusEl, controlPanel, new ObjectLayerControls(sceneManager.objectLayers).container, [foregroundControls.container, foregroundControls.backdropContainer, foregroundControls.editContainer]);
+  soundControls.container, recordingControls.container, statusEl, controlPanel, new ObjectLayerControls(sceneManager.objectLayers, () => foregroundControls.placeInsideVolumes()).container, [foregroundControls.container, foregroundControls.backdropContainer, foregroundControls.editContainer], canvasColorControls);
 
 const startScreen = new StartScreen();
 appRoot.appendChild(startScreen.container);

@@ -8,7 +8,9 @@ export class ObjectLayerControls {
  private pane:Pane|null=null;
  private selected:number|null=null;
  private layers:ObjectLayers;
- constructor(layers:ObjectLayers){
+ private placeForegroundInside: () => void;
+ constructor(layers:ObjectLayers, placeForegroundInside: () => void){
+  this.placeForegroundInside=placeForegroundInside;
   this.layers=layers;
   this.container.className='object-layer-controls';
   const add=document.createElement('div');add.className='control-row';
@@ -24,7 +26,7 @@ export class ObjectLayerControls {
    input.value='';
   });
   add.append(this.button('Import GLB / OBJ',()=>input.click()),input);
-  const help=document.createElement('p');help.className='studio-panel-hint';help.textContent='Add several objects or import multiple static models. Each layer has its own material and transform. Z controls front/back depth. GLB must contain embedded assets; OBJ imports geometry only. Inside volumes uses every visible layer with Media boundary enabled, plus the enabled Glass volume.';
+  const help=document.createElement('p');help.className='studio-panel-hint';help.textContent='Add several objects or import multiple static models. Each layer has its own material and transform. Z controls front/back depth. GLB must contain embedded assets; OBJ imports geometry only. Inside volumes uses every visible layer with Image INSIDE enabled, plus the enabled Glass volume.';
   this.container.append(add,help,this.list,this.editor,status);this.refreshList();
  }
  private button(label:string,action:()=>void):HTMLButtonElement{const b=document.createElement('button');b.type='button';b.className='background-button';b.textContent=label;b.addEventListener('click',action);return b;}
@@ -34,7 +36,7 @@ export class ObjectLayerControls {
   for(const layer of [...this.layers.layers].reverse()){
    const row=document.createElement('div');row.className='object-layer-row';
    const select=this.button(layer.name,()=>this.select(layer));select.classList.toggle('active',this.selected===layer.id);
-   const visible=this.button(layer.visible?'Hide':'Show',()=>{layer.visible=!layer.visible;this.layers.apply(layer);this.refreshList();});
+   const visible=this.button(layer.visible?'Hide':'Show',()=>{layer.visible=!layer.visible;this.layers.apply(layer);this.refreshList();this.pane?.refresh();});
    row.append(select,visible);this.list.append(row);
   }
  }
@@ -46,6 +48,10 @@ export class ObjectLayerControls {
   }));
   this.editor.append(actions);const controls=document.createElement('div');this.editor.append(controls);
   const pane=this.pane=new Pane({container:controls,title:'Selected 3D layer'});
+  pane.addBinding(layer,'visible',{label:'Enable layer (ON/OFF)'}).on('change',()=>this.refreshList());
+  pane.addBinding(layer,'mediaTarget',{label:'Image INSIDE'});
+  pane.addBinding(layer,'clipEffects',{label:'Effects INSIDE'});
+  pane.addButton({title:'Place Foreground inside'}).on('click',()=>{layer.mediaTarget=true;this.placeForegroundInside();pane.refresh();});
   pane.addBinding(layer,'name',{label:'Name'}).on('change',()=>this.refreshList());
   pane.addBinding(layer,'material',{label:'Material',options:{Glass:'Glass',Solid:'Solid'}});
   pane.addBinding(layer,'color',{label:'Custom color'}).on('change',()=>{layer.usePalette=false;pane.refresh();});pane.addBinding(layer,'opacity',{label:'Opacity',min:0,max:1,step:0.05});
@@ -54,8 +60,6 @@ export class ObjectLayerControls {
   pane.addBinding(layer,'roughness',{label:'Glass roughness',min:0,max:1,step:0.05});
   pane.addBinding(layer,'edge',{label:'Edge strength',min:0,max:1,step:0.05});
   pane.addBinding(layer,'backEdges',{label:'Back edges',min:0,max:1,step:0.05});
-  pane.addBinding(layer,'mediaTarget',{label:'Media boundary'});
-  pane.addBinding(layer,'clipEffects',{label:'Keep effects inside'});
   pane.addBinding(this.layers,'perspective',{label:'Scene perspective',min:0,max:1,step:0.05});
   pane.addBinding(layer,'x',{label:'Position X',min:-1.5,max:1.5,step:0.01});pane.addBinding(layer,'y',{label:'Position Y',min:-1.5,max:1.5,step:0.01});
   pane.addBinding(layer,'z',{label:'Depth Z',min:-3,max:2,step:0.05});

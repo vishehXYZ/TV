@@ -26,7 +26,7 @@ export class BackgroundLayer {
   }
   updateGenerative(time: number, pose: PoseState, body: number, audio: number): void {
     if (this.mode !== 'generative' || !this.generator) return;
-    this.generator.update(time, this.sceneManager.aspect, pose, body, audio);
+    this.generator.update(time, this.sceneManager.aspect, pose, body, audio, this.sceneManager.renderer);
     this.sourceAspect = this.sceneManager.aspect;
   }
 
@@ -172,8 +172,9 @@ export class BackgroundLayer {
   }
 
   private clearSource(): void {
+    if (this.generator) this.generator.dispose();
+    else this.currentTexture?.dispose();
     this.generator = null;
-    this.currentTexture?.dispose();
     this.currentTexture = null;
     this.material.setMap(null);
     if (this.ownedVideoEl) {

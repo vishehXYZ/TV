@@ -1,69 +1,102 @@
 import * as THREE from 'three';
 import type { PoseState } from '../tracking/PoseState';
 
-export const GENERATIVE_STYLES = ['Twisted Geometry', 'Fractured Planes', 'Polygon Tunnel', 'Digital Ink', 'Orbit Weave', 'Prism Grid'] as const;
+export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex'] as const;
+/** Independent 3D stage rendered with the app's renderer; no second WebGL context. */
 export class GenerativeBackground {
-  readonly canvas = document.createElement('canvas');
-  readonly texture: THREE.CanvasTexture;
-  readonly settings = { style: 'Twisted Geometry', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', paused: false };
-  private ctx: CanvasRenderingContext2D;
+  readonly target = new THREE.WebGLRenderTarget(960, 540, { depthBuffer: true });
+  readonly texture = this.target.texture;
+  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', paused: false };
+  readonly scene = new THREE.Scene();
+  readonly camera = new THREE.PerspectiveCamera(43, 16 / 9, .1, 100);
+  readonly sculpture = new THREE.Group();
+  private pieces: THREE.Mesh[] = [];
+  private signature = '';
   private time = 0;
-  private last = 0;
+  private last = -1;
   private pulse = 0;
+  private pointer = new THREE.Vector2();
   constructor() {
-    this.canvas.width = 960; this.canvas.height = 540;
-    this.ctx = this.canvas.getContext('2d')!;
-    this.texture = new THREE.CanvasTexture(this.canvas);
-    this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.camera.position.set(0, 0, 10);
+    this.scene.add(this.sculpture, new THREE.HemisphereLight(0xd9eaff, 0x21042a, 2.3));
+    const key = new THREE.DirectionalLight(0xffffff, 4);key.position.set(-3,5,6);this.scene.add(key);
+    const rim = new THREE.DirectionalLight(0xff277c, 3);rim.position.set(4,-2,-3);this.scene.add(rim);
+    const fill = new THREE.DirectionalLight(0x44dfff, 2);fill.position.set(-5,-1,1);this.scene.add(fill);
   }
-  update(now: number, aspect: number, pose: PoseState, bodyEnergy: number, sound: number): void {
-    if (now - this.last < 1 / 30 && this.last !== 0) return;
-    const dt = Math.min(.1, Math.max(0, now - this.last)); this.last = now;
-    const s = this.settings, c = this.ctx;
-    const h = Math.round(960 / Math.max(.25, aspect));
-    if (this.canvas.height !== h) this.canvas.height = h;
-    const w = this.canvas.width;
-    const useBody = s.reaction === 'Body' || s.reaction === 'Body + Sound';
-    const useSound = s.reaction === 'Sound' || s.reaction === 'Body + Sound';
-    const target = Math.min(2, ((useBody ? bodyEnergy : 0) + (useSound ? sound : 0)) * s.sensitivity);
-    this.pulse += (target - this.pulse) * (1 - Math.exp(-dt * 10));
-    if (!s.paused) this.time += dt * s.speed * (s.reaction === 'Automatic' ? 1 : .25 + this.pulse * 2);
-    const t = this.time, p = this.pulse;
-    const wrist = pose.hasDetection && useBody ? pose.landmarks[15] : undefined;
-    const bx = wrist ? (.5 - wrist.x) * w * .35 : 0;
-    const by = wrist ? (wrist.y - .5) * h * .35 : 0;
-    const colors = s.palette === 'Red / Ink' ? ['#fa1734','#900c28','#161219','#ff603e'] : s.palette === 'Graphite' ? ['#111111','#555555','#999999','#292929'] : s.palette === 'Electric' ? ['#ff1493','#00dfff','#622bff','#ff6800'] : ['#c8ff00','#ff205a','#651bff','#00edce'];
-    c.globalAlpha = 1; c.fillStyle = s.base === 'White' ? '#ffffff' : '#080810'; c.fillRect(0,0,w,h);
-    c.save(); c.translate(w / 2 + bx, h / 2 + by); c.scale(s.size,s.size);
-    c.lineWidth = 1.5 + p * 2;
-    const n = Math.round(24 * s.density);
-    const polygon = (x:number,y:number,r:number,sides:number,angle:number,fill:boolean) => {
-      c.beginPath(); for(let k=0;k<=sides;k++){const a=angle+k*Math.PI*2/sides; const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;k?c.lineTo(px,py):c.moveTo(px,py);} fill?c.fill():c.stroke();
-    };
-    for(let i=0;i<n;i++) {
-      const f=i/n, a=f*Math.PI*2+t*.4, color=colors[i%colors.length]!;
-      c.strokeStyle=color;c.fillStyle=color;
-      if(s.style==='Twisted Geometry') {
-        const r=30+f*Math.min(w,h)*.7;
-        c.save();c.rotate(Math.sin(t*.5+f*4)*.9);c.scale(1,.45+.3*Math.sin(t+f*6));polygon(0,0,r,4,t*.3+f*3,false);c.restore();
-      } else if(s.style==='Fractured Planes') {
-        const x=(Math.sin(i*12.7)*.5)*w, y=(Math.cos(i*7.3)*.5)*h;
-        c.globalAlpha=.75;polygon(x+Math.sin(t+i)*35*p,y+Math.cos(t+i)*35*p,25+f*80,3,t*(i%2?1:-1)*.4+i,true);
-      } else if(s.style==='Polygon Tunnel') {
-        const depth=(f+t*.1)%1, r=8+depth*depth*Math.max(w,h);
-        c.globalAlpha=.2+depth*.8;polygon(Math.sin(t)*depth*60,Math.cos(t*.7)*depth*40,r,6,t*.25+depth*.8,false);
-      } else if(s.style==='Digital Ink') {
-        c.beginPath();for(let k=0;k<65;k++){const x=(k/64-.5)*w*1.5;const y=Math.sin(k*.17+t+i*.43)*(40+p*70)+Math.sin(k*.043-t*.7)*90+(f-.5)*h; k?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();
-      } else if(s.style==='Orbit Weave') {
-        c.save();c.rotate(a);c.beginPath();c.ellipse(0,0,30+f*w*.6,20+f*h*.2,t*.3,0,Math.PI*2);c.stroke();polygon(Math.cos(t+i)*f*w*.4,Math.sin(t+i)*f*h*.4,8+p*12,4,a,true);c.restore();
-      } else {
-        const columns=Math.ceil(Math.sqrt(n*aspect)), rows=Math.ceil(n/columns);
-        const x=((i%columns+.5)/columns-.5)*w,y=((Math.floor(i/columns)+.5)/rows-.5)*h;
-        const r=Math.min(w/columns,h/rows)*(.25+.14*Math.sin(t*2+i)+p*.12);
-        polygon(x,y,r,4,t*.3+Math.sin(i+t),true); c.strokeStyle=s.base==='White'?'#111111':'#ffffff';polygon(x+8,y-8,r,4,t*.3+Math.sin(i+t),false);
+  private clearPieces(): void {
+    for(const mesh of this.pieces){mesh.geometry.dispose();(mesh.material as THREE.Material).dispose();this.sculpture.remove(mesh);}this.pieces=[];
+  }
+  private rebuild(): void {
+    this.clearPieces();
+    const s=this.settings;
+    const colors=s.palette==='Red / Ink'?['#ed1237','#191119','#ff5634','#840c24']:s.palette==='Graphite'?['#17171c','#bcbcc2','#595965','#f4f4f4']:s.palette==='Electric'?['#ff167d','#2255ff','#10dfff','#ff7315']:['#c6ff05','#ff2063','#6622ff','#00e4c2'];
+    const count=Math.round((s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12)*s.density);
+    for(let i=0;i<count;i++) {
+      let geometry:THREE.BufferGeometry;
+      switch(s.style){
+        case 'Chromatic Organism': geometry=new THREE.TorusKnotGeometry(.95,.21,100,10,2+(i%3),3+(i%2)*2);break;
+        case 'Razor Bloom': geometry=new THREE.ConeGeometry(.55,3.6,3,1);break;
+        case 'Impossible Architecture': geometry=new THREE.BoxGeometry(2.5,.24,.45);break;
+        case 'Liquid Satellites': geometry=i%3===0?new THREE.TorusGeometry(.8,.28,16,48):new THREE.SphereGeometry(.6,24,16);break;
+        case 'Shattered Sun': geometry=new THREE.IcosahedronGeometry(.65,0);break;
+        default: geometry=new THREE.TorusGeometry(1,.22,12,72,Math.PI*1.65);
+      }
+      const material=new THREE.MeshPhysicalMaterial({color:colors[i%colors.length],roughness:s.style==='Razor Bloom'?.28:.23,metalness:.22,clearcoat:1,clearcoatRoughness:.12});
+      const mesh=new THREE.Mesh(geometry,material);this.pieces.push(mesh);this.sculpture.add(mesh);
+    }
+  }
+  update(now:number,aspect:number,pose:PoseState,bodyEnergy:number,sound:number,renderer?:THREE.WebGLRenderer): void {
+    if(this.last>=0 && now-this.last<1/30)return;
+    const dt=this.last<0?1/30:Math.min(.1,Math.max(0,now-this.last));this.last=now;
+    const s=this.settings, signature=`${s.style}/${s.palette}/${s.density}`;
+    if(signature!==this.signature){this.signature=signature;this.rebuild();}
+    const body=s.reaction==='Body'||s.reaction==='Body + Sound', audio=s.reaction==='Sound'||s.reaction==='Body + Sound';
+    if(!s.paused){
+      const energy=Math.min(2,((body?bodyEnergy:0)+(audio?sound:0))*s.sensitivity);
+      this.pulse+=(energy-this.pulse)*(1-Math.exp(-dt*9));
+      this.time+=dt*s.speed*(s.reaction==='Automatic'?1:.35+this.pulse*1.4);
+      const wrist=body&&pose.hasDetection?pose.landmarks[15]:undefined;
+      this.pointer.lerp(new THREE.Vector2(wrist?(.5-wrist.x)*2:0,wrist?(.5-wrist.y)*2:0),1-Math.exp(-dt*5));
+    }
+    const t=this.time,p=this.pulse,n=this.pieces.length;
+    this.sculpture.scale.setScalar(s.size*(1+p*.1));
+    this.sculpture.rotation.set(this.pointer.y*.35+Math.sin(t*.17)*.16,this.pointer.x*.6+t*.12,Math.sin(t*.13)*.15);
+    for(let i=0;i<n;i++){
+      const mesh=this.pieces[i]!,f=i/n,a=f*Math.PI*2;
+      mesh.scale.setScalar(1);mesh.position.set(0,0,0);mesh.rotation.set(0,0,0);
+      if(s.style==='Chromatic Organism'){
+        mesh.position.set(Math.cos(a+t*.15)*1.55,Math.sin(a+t*.15)*1.55,Math.sin(a*3+t)*.9);
+        mesh.rotation.set(t*.23+a,a*2-t*.19,a+t*.16);mesh.scale.setScalar(.65+.2*Math.sin(t+a)+p*.12);
+      }else if(s.style==='Razor Bloom'){
+        mesh.position.set(Math.sin(a)*1.15,Math.cos(a)*1.15,Math.sin(a*3+t)*.7);
+        mesh.rotation.set(Math.sin(t*.5+a)*.8,Math.cos(a+t*.3),-a);mesh.scale.set(1,.8+.3*Math.sin(t+a)+p*.3,1);
+      }else if(s.style==='Impossible Architecture'){
+        mesh.position.set(Math.sin(i*2.4+t*.2)*2.2,(f-.5)*5,Math.cos(i*2.4+t*.2)*1.4);
+        mesh.rotation.set(t*.15+i*.7,t*.2+i*.4,Math.sin(t*.3+i)*.6);
+      }else if(s.style==='Liquid Satellites'){
+        const r=1.3+Math.sin(i*3.7)*.9;
+        mesh.position.set(Math.cos(a+t*.3)*r,Math.sin(a*2+t*.25)*1.7,Math.sin(a+t*.3)*r);
+        mesh.rotation.set(a+t*.3,t*.4,a);mesh.scale.setScalar(.7+f*.7+p*.2);
+      }else if(s.style==='Shattered Sun'){
+        const latitude=Math.acos(1-2*(i+.5)/n),longitude=i*2.39996+t*.16;
+        const r=1.9+Math.sin(t*.8+i*.8)*.55+p*.75;
+        mesh.position.set(Math.sin(latitude)*Math.cos(longitude)*r,Math.cos(latitude)*r,Math.sin(latitude)*Math.sin(longitude)*r);
+        mesh.rotation.set(t*.4+i,t*.3+i*2,t*.2);mesh.scale.set(.5,.6+f,1.3);
+      }else{
+        mesh.position.z=(f-.5)*4;mesh.rotation.set(Math.sin(t*.3+f*3)*.35,Math.cos(t*.2+f*4)*.35,a+t*.4);
+        mesh.scale.setScalar(.6+f*1.9+p*.15);
       }
     }
-    c.restore();c.globalAlpha=1;this.texture.needsUpdate=true;
+    this.scene.background=new THREE.Color(s.base==='White'?'#ffffff':'#08070e');
+    this.camera.aspect=aspect;this.camera.position.z=aspect<1?10/aspect:10;this.camera.updateProjectionMatrix();
+    const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height)this.target.setSize(960,height);
+    if(renderer){
+      const previous=renderer.getRenderTarget(),autoClear=renderer.autoClear;
+      const viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
+      const xr=renderer.xr.enabled;
+      try{renderer.xr.enabled=false;renderer.autoClear=true;renderer.setRenderTarget(this.target);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);}
+      finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;renderer.xr.enabled=xr;}
+    }
   }
-  dispose(): void { this.texture.dispose(); }
+  dispose():void{this.clearPieces();this.target.dispose();}
 }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { PoseState } from '../tracking/PoseState';
 
-export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex'] as const;
+export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex', 'Crystal Swarm', 'Ribbon Tide', 'Orbital Cathedral', 'Pulse Totems', 'Molecular Dream', 'Origami Storm'] as const;
 /** Independent 3D stage rendered with the app's renderer; no second WebGL context. */
 export class GenerativeBackground {
   readonly target = new THREE.WebGLRenderTarget(960, 540, { depthBuffer: true });
@@ -30,7 +30,8 @@ export class GenerativeBackground {
     this.clearPieces();
     const s=this.settings;
     const colors=s.palette==='Red / Ink'?['#ed1237','#191119','#ff5634','#840c24']:s.palette==='Graphite'?['#17171c','#bcbcc2','#595965','#f4f4f4']:s.palette==='Electric'?['#ff167d','#2255ff','#10dfff','#ff7315']:['#c6ff05','#ff2063','#6622ff','#00e4c2'];
-    const count=Math.round((s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12)*s.density);
+    const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30 };
+    const count=Math.round((extras[s.style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
     for(let i=0;i<count;i++) {
       let geometry:THREE.BufferGeometry;
       switch(s.style){
@@ -39,9 +40,16 @@ export class GenerativeBackground {
         case 'Impossible Architecture': geometry=new THREE.BoxGeometry(2.5,.24,.45);break;
         case 'Liquid Satellites': geometry=i%3===0?new THREE.TorusGeometry(.8,.28,16,48):new THREE.SphereGeometry(.6,24,16);break;
         case 'Shattered Sun': geometry=new THREE.IcosahedronGeometry(.65,0);break;
+        case 'Crystal Swarm': geometry=new THREE.OctahedronGeometry(.65);break;
+        case 'Ribbon Tide': geometry=new THREE.BoxGeometry(.16,.2,4.5,1,1,24);break;
+        case 'Orbital Cathedral': geometry=new THREE.TorusGeometry(1,.12,10,64);break;
+        case 'Pulse Totems': geometry=new THREE.CylinderGeometry(.34,.55,.55,6);break;
+        case 'Molecular Dream': geometry=new THREE.CapsuleGeometry(.19,.85,4,12);break;
+        case 'Origami Storm': geometry=new THREE.TetrahedronGeometry(.85);break;
         default: geometry=new THREE.TorusGeometry(1,.22,12,72,Math.PI*1.65);
       }
       const material=new THREE.MeshPhysicalMaterial({color:colors[i%colors.length],roughness:s.style==='Razor Bloom'?.28:.23,metalness:.22,clearcoat:1,clearcoatRoughness:.12});
+      if(s.style==='Ribbon Tide')geometry.userData.basePositions=Float32Array.from(geometry.getAttribute('position').array);
       const mesh=new THREE.Mesh(geometry,material);this.pieces.push(mesh);this.sculpture.add(mesh);
     }
   }
@@ -82,6 +90,42 @@ export class GenerativeBackground {
         const r=1.9+Math.sin(t*.8+i*.8)*.55+p*.75;
         mesh.position.set(Math.sin(latitude)*Math.cos(longitude)*r,Math.cos(latitude)*r,Math.sin(latitude)*Math.sin(longitude)*r);
         mesh.rotation.set(t*.4+i,t*.3+i*2,t*.2);mesh.scale.set(.5,.6+f,1.3);
+      }else if(s.style==='Crystal Swarm'){
+        const longitude=i*2.39996+t*.14,latitude=Math.acos(1-2*(i+.5)/n);
+        const radius=2.1+.45*Math.sin(t+i)+p*.45;
+        mesh.position.set(Math.cos(longitude)*Math.sin(latitude)*radius,Math.cos(latitude)*radius,Math.sin(longitude)*Math.sin(latitude)*radius);
+        mesh.rotation.set(t*.4+i,a+t*.3,i*.6);mesh.scale.set(.55,1.4+.6*Math.sin(t+i),.55);
+      }else if(s.style==='Ribbon Tide'){
+        mesh.position.set((f-.5)*5,Math.sin(f*7+t)*.8,Math.cos(f*6+t*.6)*.65);
+        mesh.rotation.set(Math.sin(f*5+t*.6)*.4,Math.sin(f*7+t)*.55,Math.sin(t*.4+f*5)*.25);
+        mesh.scale.set(1,1+p*.5,1);
+        const positions=mesh.geometry.getAttribute('position');
+        // Bend the ribbons from their original longitudinal coordinate, without accumulating deformation.
+        for(let v=0;v<positions.count;v++){
+          const base=mesh.geometry.userData.basePositions as Float32Array;
+          const z=base[v*3+2]!;
+          positions.setY(v,base[v*3+1]!+Math.sin(z*1.4+t+f*5)*(.35+p*.2));
+        }
+        positions.needsUpdate=true;mesh.geometry.computeVertexNormals();
+      }else if(s.style==='Orbital Cathedral'){
+        mesh.position.set(Math.sin(a+t*.15)*1.2,Math.cos(a+t*.15)*1.2,Math.sin(a*2+t*.3)*1.2);
+        mesh.rotation.set(a+t*.15,Math.sin(a+t*.25)*1.4,a*.5);
+        mesh.scale.setScalar(1.1+.65*Math.sin(f*Math.PI)+p*.2);
+      }else if(s.style==='Pulse Totems'){
+        const column=i%4,row=Math.floor(i/4),rows=Math.ceil(n/4);
+        mesh.position.set((column-1.5)*1.15,(row-(rows-1)/2)*.65,Math.sin(row*.9+column+t)*.65);
+        mesh.rotation.set(Math.sin(t*.5+row)*.22,t*.35+row*.3+column*.5,Math.sin(t+column)*.13);
+        mesh.scale.setScalar(.75+.22*Math.sin(t*1.5+row*.8+column)+p*.2);
+      }else if(s.style==='Molecular Dream'){
+        const strand=i%3,step=Math.floor(i/3),turn=step*.55+t*.35+strand*Math.PI*2/3;
+        mesh.position.set(Math.cos(turn)*1.45,(step-(Math.ceil(n/3)-1)/2)*.34,Math.sin(turn)*1.45);
+        mesh.rotation.set(Math.PI/2,turn,strand*.8+Math.sin(t+step)*.5);
+        mesh.scale.setScalar(.8+p*.3);
+      }else if(s.style==='Origami Storm'){
+        const turn=i*2.39996+t*.25,radius=.5+f*2.1;
+        mesh.position.set(Math.cos(turn)*radius,Math.sin(turn)*radius,Math.sin(i*1.7+t)*1.4);
+        mesh.rotation.set(t*.4+i*.3,t*.3-i*.8,t*.2+i);
+        mesh.scale.set(1.2,.18+.15*(1+Math.sin(t+i)),.9+p*.35);
       }else{
         mesh.position.z=(f-.5)*4;mesh.rotation.set(Math.sin(t*.3+f*3)*.35,Math.cos(t*.2+f*4)*.35,a+t*.4);
         mesh.scale.setScalar(.6+f*1.9+p*.15);

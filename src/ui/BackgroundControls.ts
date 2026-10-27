@@ -1,4 +1,4 @@
-import { GENERATIVE_STYLES } from '../core/GenerativeBackground';
+import { GENERATIVE_STYLES, TYPOGRAPHY_STYLES } from '../core/GenerativeBackground';
 import { BackgroundLayer } from '../core/BackgroundLayer';
 
 /** Brightness/contrast/saturation combos for the one-click filter presets — kept alongside the raw
@@ -104,7 +104,7 @@ export class BackgroundControls {
 
     const generatorPanel = document.createElement('div');
     generatorPanel.className = 'background-controls'; generatorPanel.style.display = 'none';
-    const genSelect = (label: string, values: readonly string[], key: 'style' | 'reaction' | 'palette' | 'base') => {
+    const genSelect = (label: string, values: readonly string[], key: 'style' | 'reaction' | 'palette' | 'base' | 'alphabet') => {
       const row = document.createElement('label'); row.className = 'opacity-row'; row.textContent = label;
       const select = document.createElement('select'); select.className = 'background-button';
       for(const value of values) {const o=document.createElement('option');o.value=value;o.textContent=value;select.append(o);}
@@ -113,6 +113,10 @@ export class BackgroundControls {
       return select;
     };
     const styleSelect=genSelect('Style',GENERATIVE_STYLES,'style');
+    const alphabetSelect=genSelect('Alphabet',['Mixed','Persian','English','Russian'],'alphabet');
+    const alphabetRow=alphabetSelect.parentElement!;
+    const syncAlphabetVisibility=()=>{alphabetRow.style.display=TYPOGRAPHY_STYLES.includes(styleSelect.value)?'flex':'none';};
+    styleSelect.addEventListener('change',syncAlphabetVisibility);syncAlphabetVisibility();
     const reactionSelect=genSelect('React to',['Body + Sound','Automatic','Body','Sound'],'reaction');
     const paletteSelect=genSelect('Colors',['Acid','Electric','Red / Ink','Graphite'],'palette');
     const baseSelect=genSelect('Base',['Black','White'],'base');
@@ -129,7 +133,7 @@ export class BackgroundControls {
     const hint=document.createElement('small');hint.textContent='Body: enable Camera. Sound: start Microphone or Music in Sound. Recorded with the full composition.';generatorPanel.append(hint);
     const genBtn=this.makeButton('Generative',()=>{
       background.setGenerative(); const s=background.generator!.settings;
-      s.style=styleSelect.value;s.reaction=reactionSelect.value;s.palette=paletteSelect.value;s.base=baseSelect.value;
+      s.style=styleSelect.value;s.alphabet=alphabetSelect.value;s.reaction=reactionSelect.value;s.palette=paletteSelect.value;s.base=baseSelect.value;
       for(const [input,key] of genSliders)s[key]=Number(input.value)/100;
       pauseGen.textContent='Pause animation';this.setActive(genBtn);generatorPanel.style.display='flex';
       opacityRow.style.display='flex';this.editContainer.style.display='flex';speedRow.style.display='none';

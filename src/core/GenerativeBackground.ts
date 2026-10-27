@@ -1,12 +1,31 @@
 import * as THREE from 'three';
+import { FontLoader, type FontData } from 'three/examples/jsm/loaders/FontLoader.js';
+import glyphData from '../generators/typography/glyphs.json';
 import type { PoseState } from '../tracking/PoseState';
 
-export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex', 'Crystal Swarm', 'Ribbon Tide', 'Orbital Cathedral', 'Pulse Totems', 'Molecular Dream', 'Origami Storm'] as const;
+export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex', 'Crystal Swarm', 'Ribbon Tide', 'Orbital Cathedral', 'Pulse Totems', 'Molecular Dream', 'Origami Storm', 'Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation'] as const;
+export const TYPOGRAPHY_STYLES: readonly string[] = ['Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation'];
+const LETTERS: Record<string, string> = {
+  Persian: 'ابتثجچحخدذرزژسشصضطظعغفقکگلمنوهیپ',
+  English: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  Russian: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+};
+const font = new FontLoader().parse(glyphData as FontData);
+function letterGeometry(char: string): THREE.BufferGeometry {
+  const shapes = font.generateShapes(char, 1);
+  const geometry = new THREE.ExtrudeGeometry(shapes, { depth: .25, bevelEnabled: true, bevelThickness: .035, bevelSize: .025, bevelSegments: 2, curveSegments: 5 });
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox!;
+  const extent = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, .01);
+  geometry.translate(-(box.max.x + box.min.x) / 2, -(box.max.y + box.min.y) / 2, -.125);
+  geometry.scale(.8 / extent, .8 / extent, 1);
+  return geometry;
+}
 /** Independent 3D stage rendered with the app's renderer; no second WebGL context. */
 export class GenerativeBackground {
   readonly target = new THREE.WebGLRenderTarget(960, 540, { depthBuffer: true });
   readonly texture = this.target.texture;
-  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', paused: false };
+  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', paused: false };
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(43, 16 / 9, .1, 100);
   readonly sculpture = new THREE.Group();
@@ -30,11 +49,20 @@ export class GenerativeBackground {
     this.clearPieces();
     const s=this.settings;
     const colors=s.palette==='Red / Ink'?['#ed1237','#191119','#ff5634','#840c24']:s.palette==='Graphite'?['#17171c','#bcbcc2','#595965','#f4f4f4']:s.palette==='Electric'?['#ff167d','#2255ff','#10dfff','#ff7315']:['#c6ff05','#ff2063','#6622ff','#00e4c2'];
-    const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30 };
+    const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30, 'Alphabet Storm': 42, 'Letter Orbit': 30, 'Glyph Rain': 54, 'Language Constellation': 36 };
     const count=Math.round((extras[s.style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
+    const letters = s.alphabet === 'Mixed' ? [LETTERS.Persian!, LETTERS.English!, LETTERS.Russian!] : [LETTERS[s.alphabet] ?? LETTERS.English!];
+    const cache = new Map<string, THREE.BufferGeometry>();
     for(let i=0;i<count;i++) {
       let geometry:THREE.BufferGeometry;
-      switch(s.style){
+      if (TYPOGRAPHY_STYLES.includes(s.style)) {
+        const source=letters[i % letters.length]!;
+        const char=source[Math.floor(i / letters.length * 7) % source.length]!;
+        let original=cache.get(char);
+        if (!original) { original=letterGeometry(char); cache.set(char,original); }
+        geometry=original.clone();
+        geometry.userData.character=char;
+      } else switch(s.style){
         case 'Chromatic Organism': geometry=new THREE.TorusKnotGeometry(.95,.21,100,10,2+(i%3),3+(i%2)*2);break;
         case 'Razor Bloom': geometry=new THREE.ConeGeometry(.55,3.6,3,1);break;
         case 'Impossible Architecture': geometry=new THREE.BoxGeometry(2.5,.24,.45);break;
@@ -52,11 +80,12 @@ export class GenerativeBackground {
       if(s.style==='Ribbon Tide')geometry.userData.basePositions=Float32Array.from(geometry.getAttribute('position').array);
       const mesh=new THREE.Mesh(geometry,material);this.pieces.push(mesh);this.sculpture.add(mesh);
     }
+    for(const geometry of cache.values()) geometry.dispose();
   }
   update(now:number,aspect:number,pose:PoseState,bodyEnergy:number,sound:number,renderer?:THREE.WebGLRenderer): void {
     if(this.last>=0 && now-this.last<1/30)return;
     const dt=this.last<0?1/30:Math.min(.1,Math.max(0,now-this.last));this.last=now;
-    const s=this.settings, signature=`${s.style}/${s.palette}/${s.density}`;
+    const s=this.settings, signature=`${s.style}/${s.palette}/${s.density}/${s.alphabet}`;
     if(signature!==this.signature){this.signature=signature;this.rebuild();}
     const body=s.reaction==='Body'||s.reaction==='Body + Sound', audio=s.reaction==='Sound'||s.reaction==='Body + Sound';
     if(!s.paused){
@@ -126,6 +155,27 @@ export class GenerativeBackground {
         mesh.position.set(Math.cos(turn)*radius,Math.sin(turn)*radius,Math.sin(i*1.7+t)*1.4);
         mesh.rotation.set(t*.4+i*.3,t*.3-i*.8,t*.2+i);
         mesh.scale.set(1.2,.18+.15*(1+Math.sin(t+i)),.9+p*.35);
+      }else if(s.style==='Alphabet Storm'){
+        const turn=i*2.39996+t*.2,radius=.5+f*3+p*.45;
+        mesh.position.set(Math.cos(turn)*radius,Math.sin(turn)*radius,Math.sin(i*1.9+t*.7)*2);
+        mesh.rotation.set(Math.sin(t*.5+i)*.45,t*.45+i*.25,Math.sin(t*.3+i)*.35);
+        mesh.scale.setScalar(.65+(i%4)*.15+p*.12);
+      }else if(s.style==='Letter Orbit'){
+        const ring=i%3,angle=(Math.floor(i/3)/Math.ceil(n/3))*Math.PI*2+t*(ring%2?-.3:.25);
+        const radius=1.2+ring*.7+p*.2;
+        mesh.position.set(Math.cos(angle)*radius,Math.sin(angle)*radius,Math.sin(angle+ring)*.8);
+        mesh.rotation.set(Math.sin(angle)*.3,Math.cos(angle)*.35,angle+Math.PI/2);
+        mesh.scale.setScalar(.72+ring*.12);
+      }else if(s.style==='Glyph Rain'){
+        const col=i%9,row=Math.floor(i/9),rows=Math.ceil(n/9);
+        const y=(((row/rows-t*(.04+(col%3)*.01))%1+1)%1-.5)*6;
+        mesh.position.set((col-4)*.85+.12*Math.sin(t+i),y,Math.sin(col*3+row)*1.2);
+        mesh.rotation.set(.12*Math.sin(t+i),Math.sin(t*.3+i)*.35,Math.sin(i+t*.3)*.15);
+        mesh.scale.setScalar(.8+p*.2);
+      }else if(s.style==='Language Constellation'){
+        const lat=Math.acos(1-2*(i+.5)/n),lon=i*2.39996+t*.14,radius=2.2+p*.4;
+        mesh.position.set(Math.sin(lat)*Math.cos(lon)*radius,Math.cos(lat)*radius,Math.sin(lat)*Math.sin(lon)*radius);
+        mesh.rotation.set(Math.sin(lat+t)*.25,lon*.35,Math.sin(lon)*.25);mesh.scale.setScalar(.7+.12*Math.sin(t+i));
       }else{
         mesh.position.z=(f-.5)*4;mesh.rotation.set(Math.sin(t*.3+f*3)*.35,Math.cos(t*.2+f*4)*.35,a+t*.4);
         mesh.scale.setScalar(.6+f*1.9+p*.15);

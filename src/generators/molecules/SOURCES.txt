@@ -1,0 +1,10 @@
+Molecular coordinates and bond orders: PubChem PUG REST computed 3D conformers, retrieved 2026-10-28.
+Cortisol: CID 5754, C21H30O5
+Adrenaline (Epinephrine): CID 5816, C9H13NO3
+Melatonin: CID 896, C13H16N2O2
+Estradiol: CID 5757, C18H24O2
+Testosterone: CID 6013, C19H28O2
+Progesterone: CID 5994, C21H30O2
+Data request format: https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5754/JSON?record_type=3d
+Documentation: https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest
+The app displays heavy atoms. Hydrogens remain in the bundled source data and formulae but are hidden visually. Ball-and-stick mode shows separate cylinders for multiple bonds. Artistic rotation, color and scale do not simulate chemistry or hormone activity.

@@ -294,7 +294,8 @@ const renderFrame = (): void => {
       revealMode.update(poseTracker, appState, lastElapsed, lastDt);
       break;
   }
-  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
+  foregroundLayer.setBodyIsolation(poseTracker.state,backgroundLayer.mode==='generative');
+  sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, backgroundLayer.generator?.settings.bodyPlacement, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
   sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);

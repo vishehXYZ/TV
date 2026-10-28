@@ -1,5 +1,8 @@
 uniform sampler2D uMap;
 uniform float uHasMap;
+uniform sampler2D uBodyMask;
+uniform float uBodyOnly;
+uniform float uBodyMaskReady;
 uniform vec2 uRepeat;
 uniform vec2 uOffset;
 uniform float uOpacity;
@@ -18,6 +21,12 @@ void main() {
   // cover-cropping and the mirrored-selfie convention.
   vec2 uv = vUv * uRepeat + uOffset;
   vec4 texColor = texture2D(uMap, uv);
+  if (uBodyOnly > 0.5) {
+    if (uBodyMaskReady < 0.5) discard;
+    float body = texture2D(uBodyMask, uv).r;
+    texColor.a *= smoothstep(0.35, 0.65, body);
+    if (texColor.a < 0.005) discard;
+  }
   vec3 color = texColor.rgb;
 
   color *= uBrightness;

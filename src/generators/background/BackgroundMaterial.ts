@@ -16,6 +16,9 @@ export class BackgroundMaterial extends THREE.ShaderMaterial {
       uniforms: {
         uMap: { value: null as THREE.Texture | null },
         uHasMap: { value: 0 },
+        uBodyMask: { value: null },
+        uBodyOnly: { value: 0 },
+        uBodyMaskReady: { value: 0 },
         uRepeat: { value: new THREE.Vector2(1, 1) },
         uOffset: { value: new THREE.Vector2(0, 0) },
         uOpacity: { value: 1 },

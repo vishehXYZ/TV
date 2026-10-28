@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SegmentationMaskTexture } from '../tracking/SegmentationMaskTexture';
 import { GenerativeBackground } from './GenerativeBackground';
 import type { PoseState } from '../tracking/PoseState';
 import type { SceneManager } from './SceneManager';
@@ -19,6 +20,17 @@ export type BackgroundMode = 'none' | 'camera' | 'image' | 'video' | 'generative
 export class BackgroundLayer {
   readonly mesh: THREE.Mesh;
   generator: GenerativeBackground | null = null;
+  private readonly crossingMesh: THREE.Mesh;
+  private readonly crossingMaterial: BackgroundMaterial;
+  private readonly bodyMask = new SegmentationMaskTexture();
+  /** Camera foreground uses its own source UV, so mask and image have identical cover crop/mirroring. */
+  setBodyIsolation(pose: PoseState, enabled: boolean): void {
+    const active=enabled && this.mode==='camera';
+    this.material.uniforms.uBodyOnly!.value=active?1:0;
+    const mask=active&&pose.hasDetection?this.bodyMask.update(pose):null;
+    this.material.uniforms.uBodyMask!.value=mask;
+    this.material.uniforms.uBodyMaskReady!.value=mask?1:0;
+  }
   setGenerative(): void {
     this.clearSource(); this.mode = 'generative';
     this.generator = new GenerativeBackground(); this.currentTexture = this.generator.texture;
@@ -28,6 +40,9 @@ export class BackgroundLayer {
     if (this.mode !== 'generative' || !this.generator) return;
     this.generator.update(time, this.sceneManager.aspect, pose, body, audio, this.sceneManager.renderer);
     this.sourceAspect = this.sceneManager.aspect;
+    this.crossingMaterial.setMap(this.generator.objectsTexture);
+    this.crossingMesh.scale.set(this.sceneManager.aspect,1,1);
+    this.crossingMesh.visible=this.drivesBackdrop && this.generator.settings.bodyPlacement==='Across body';
   }
 
   private sceneManager: SceneManager;
@@ -69,6 +84,13 @@ export class BackgroundLayer {
     this.mesh.visible = false;
     sceneManager.scene.add(this.mesh);
     sceneManager.registerMediaLayer?.(this.mesh);
+    this.crossingMaterial = new BackgroundMaterial();
+    for (const key of ['uOpacity','uDim','uBrightness','uContrast','uSaturation']) this.crossingMaterial.uniforms[key]=this.material.uniforms[key]!;
+    this.crossingMaterial.depthTest=false;this.crossingMaterial.depthWrite=false;
+    clipMediaMaterial(this.crossingMaterial,drivesBackdrop?sceneManager.mediaUniforms:sceneManager.foregroundUniforms);
+    this.crossingMesh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),this.crossingMaterial);
+    this.crossingMesh.renderOrder=10000;this.crossingMesh.visible=false;
+    sceneManager.scene.add(this.crossingMesh);sceneManager.registerMediaLayer?.(this.crossingMesh);
   }
 
   /** Uses the same <video> element the app already streams the webcam into (no duplicate getUserMedia request). */
@@ -172,6 +194,8 @@ export class BackgroundLayer {
   }
 
   private clearSource(): void {
+    this.crossingMesh.visible=false;this.crossingMaterial.setMap(null);
+    this.material.uniforms.uBodyOnly!.value=0;this.material.uniforms.uBodyMaskReady!.value=0;
     if (this.generator) this.generator.dispose();
     else this.currentTexture?.dispose();
     this.generator = null;
@@ -247,5 +271,6 @@ export class BackgroundLayer {
     this.sceneManager.scene.remove(this.mesh);
     this.mesh.geometry.dispose();
     this.material.dispose();
+    this.sceneManager.scene.remove(this.crossingMesh);this.crossingMesh.geometry.dispose();this.crossingMaterial.dispose();this.bodyMask.dispose();
   }
 }

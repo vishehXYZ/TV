@@ -1,4 +1,5 @@
-import { GENERATIVE_STYLES, TYPOGRAPHY_STYLES } from '../core/GenerativeBackground';
+import { HORMONES } from '../core/HormoneMolecules';
+import { GENERATIVE_STYLES, TYPOGRAPHY_STYLES, LANGUAGE_STYLES, HORMONE_STYLES } from '../core/GenerativeBackground';
 import { BackgroundLayer } from '../core/BackgroundLayer';
 
 /** Brightness/contrast/saturation combos for the one-click filter presets — kept alongside the raw
@@ -104,7 +105,7 @@ export class BackgroundControls {
 
     const generatorPanel = document.createElement('div');
     generatorPanel.className = 'background-controls'; generatorPanel.style.display = 'none';
-    const genSelect = (label: string, values: readonly string[], key: 'style' | 'reaction' | 'palette' | 'base' | 'alphabet') => {
+    const genSelect = (label: string, values: readonly string[], key: 'style' | 'reaction' | 'palette' | 'base' | 'alphabet' | 'bodyPlacement' | 'letterMotion' | 'moleculeArrangement' | 'molecularColors' | 'molecularForm') => {
       const row = document.createElement('label'); row.className = 'opacity-row'; row.textContent = label;
       const select = document.createElement('select'); select.className = 'background-button';
       for(const value of values) {const o=document.createElement('option');o.value=value;o.textContent=value;select.append(o);}
@@ -113,13 +114,32 @@ export class BackgroundControls {
       return select;
     };
     const styleSelect=genSelect('Style',GENERATIVE_STYLES,'style');
-    const alphabetSelect=genSelect('Alphabet',['Mixed','Persian','English','Russian'],'alphabet');
+    const groups=new Map<string,HTMLOptGroupElement>();
+    for(const option of Array.from(styleSelect.options)){
+      const group=HORMONE_STYLES[option.value]?'Hormones':TYPOGRAPHY_STYLES.includes(option.value)?'3D Letters':'3D Sculptures';
+      let optgroup=groups.get(group);if(!optgroup){optgroup=document.createElement('optgroup');optgroup.label=group;groups.set(group,optgroup);styleSelect.append(optgroup);}optgroup.append(option);
+    }
+    styleSelect.value=GENERATIVE_STYLES[0];
+    const alphabetSelect=genSelect('Alphabet',['Mixed','Persian','Hebrew','Arabic','English','Russian'],'alphabet');
     const alphabetRow=alphabetSelect.parentElement!;
-    const syncAlphabetVisibility=()=>{alphabetRow.style.display=TYPOGRAPHY_STYLES.includes(styleSelect.value)?'flex':'none';};
+    const letterMotionSelect=genSelect('Letter movement',['Alphabet Storm','Letter Orbit','Glyph Rain','Language Constellation'],'letterMotion');
+    const arrangementSelect=genSelect('Molecule layout',['Atlas','Swarm'],'moleculeArrangement');
+    const moleculeColorsSelect=genSelect('Atom colors',['Elements','Palette'],'molecularColors');
+    const moleculeFormSelect=genSelect('Molecule form',['Ball + Stick','Space filling'],'molecularForm');
+    const formula=document.createElement('small');formula.className='molecule-formula';generatorPanel.append(formula);
+    const syncAlphabetVisibility=()=>{
+      const separateLanguage=Boolean(LANGUAGE_STYLES[styleSelect.value]),molecule=HORMONE_STYLES[styleSelect.value];
+      alphabetRow.style.display=TYPOGRAPHY_STYLES.includes(styleSelect.value)&&!separateLanguage?'flex':'none';
+      letterMotionSelect.parentElement!.style.display=separateLanguage?'flex':'none';
+      for(const select of [arrangementSelect,moleculeColorsSelect,moleculeFormSelect])select.parentElement!.style.display=molecule?'flex':'none';
+      formula.style.display=molecule?'block':'none';const info=HORMONES.find(item=>item.name===molecule);formula.textContent=info?`${info.name} · ${info.formula}`:'';
+    };
     styleSelect.addEventListener('change',syncAlphabetVisibility);syncAlphabetVisibility();
     const reactionSelect=genSelect('React to',['Body + Sound','Automatic','Body','Sound'],'reaction');
     const paletteSelect=genSelect('Colors',['Acid','Electric','Red / Ink','Graphite'],'palette');
     const baseSelect=genSelect('Base',['Black','White'],'base');
+    const bodyPlacementSelect=genSelect('3D / Body',['Behind body','Across body'],'bodyPlacement');
+    const bodyHint=document.createElement('small');bodyHint.textContent='For your camera image, enable Foreground > Self View. The camera background is removed while Generative is active. Behind body keeps shapes underneath; Across body draws shapes over the image and effects.';generatorPanel.append(bodyHint);
     const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'sensitivity']> = [];
     for(const [label,key,min,max] of [['Speed','speed',0,300],['Density','density',25,250],['Size','size',40,200],['Reaction strength','sensitivity',0,300]] as const) {
       const row=document.createElement('label');row.className='opacity-row';row.textContent=label;
@@ -133,6 +153,7 @@ export class BackgroundControls {
     const hint=document.createElement('small');hint.textContent='Body: enable Camera. Sound: start Microphone or Music in Sound. Recorded with the full composition.';generatorPanel.append(hint);
     const genBtn=this.makeButton('Generative',()=>{
       background.setGenerative(); const s=background.generator!.settings;
+      s.bodyPlacement=bodyPlacementSelect.value;s.letterMotion=letterMotionSelect.value;s.moleculeArrangement=arrangementSelect.value;s.molecularColors=moleculeColorsSelect.value;s.molecularForm=moleculeFormSelect.value;
       s.style=styleSelect.value;s.alphabet=alphabetSelect.value;s.reaction=reactionSelect.value;s.palette=paletteSelect.value;s.base=baseSelect.value;
       for(const [input,key] of genSliders)s[key]=Number(input.value)/100;
       pauseGen.textContent='Pause animation';this.setActive(genBtn);generatorPanel.style.display='flex';

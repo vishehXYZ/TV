@@ -844,3 +844,46 @@ body.presentation-mode .studio-stage { inset: 0; }
 .canvas-color-controls > span { font-size:12px; color:#c5cbd7; }
 .studio-menu-layout .canvas-color-controls .background-button { font-size:12px; padding:5px 9px; }
 @media(max-width:680px){.studio-toolbar-top { gap:6px; padding:0 6px; }.canvas-color-controls > span { display:none; }.studio-toolbar-top strong { font-size:9px; letter-spacing:0.05em; }.studio-menu-layout .settings-toggle-button { padding:0 6px; font-size:11px; }}
+
+/* Opaque, high-contrast controls also apply to native dropdown popups on Windows. */
+.studio-layout .studio-dock { color-scheme: dark; color: #f4f6fa; }
+.studio-layout .studio-dock label,
+.studio-layout .studio-dock .opacity-row,
+.studio-layout .studio-dock .background-label { color: #edf0f7; }
+.studio-layout .studio-dock small,
+.studio-layout .studio-panel-hint { color: #cbd2df; line-height: 1.5; }
+.studio-layout .studio-dock select,
+.studio-layout .studio-dock select.background-button,
+.studio-layout .studio-dock input[type='text'],
+.studio-layout .studio-dock input[type='number'] { background: #202633; color: #f8faff; border: 1px solid #667186; }
+.studio-layout select option,
+.studio-layout select optgroup { background: #202633; color: #f8faff; }
+.studio-layout .studio-dock select:focus-visible,
+.studio-layout .studio-dock input:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 2px; }
+.studio-layout .studio-dock .background-controls { width: 100%; }
+.studio-layout .studio-dock .opacity-row > select { flex: 1 1 150px; min-width: 0; width: 100%; white-space: normal; }
+.studio-layout .studio-dock .molecule-formula { padding: 8px 10px; background: #202633; border-left: 3px solid #e8d197; color: #fff0c6; width: 100%; }
+.studio-layout .studio-dock .tp-rotv {
+  --bs-bg: #1a1f2a;
+  --bs-ff: system-ui, sans-serif;
+  --bs-fg: #f4f6fa;
+  --cnt-bg: #303a4b;
+  --cnt-bg-h: #3b4960;
+  --cnt-bg-a: #465771;
+  --cnt-bg-f: #3b4960;
+  --cnt-fg: #f8faff;
+  --lbl-fg: #e8edf7;
+  --in-bg: #202633;
+  --in-fg: #f8faff;
+  --btn-bg: #35445b;
+  --btn-fg: #ffffff;
+  --con-bg: #202633;
+  --con-fg: #f8faff;
+}
+.studio-layout .studio-dock .tp-lblv_l,
+.studio-layout .studio-dock .tp-fldv_t,
+.studio-layout .studio-dock .tp-lstv_s,
+.studio-layout .studio-dock .tp-txtv_i { color: #f4f6fa !important; }
+.studio-layout .studio-dock .tp-lstv_s,
+.studio-layout .studio-dock .tp-txtv_i { background-color: #202633 !important; }
+.studio-layout .studio-dock .tp-lstv_s option { color: #f8faff; background: #202633; }

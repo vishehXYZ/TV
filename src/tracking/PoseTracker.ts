@@ -112,14 +112,17 @@ export class PoseTracker {
       );
     }
 
+    if (!landmarks || landmarks.length === 0) {
+      this.state.hasDetection=false;this.state.energy=0;this.state.segmentationMask=null;
+    }
     const mask = result.segmentationMasks?.[0];
     if (mask) {
       this.state.segmentationMask = {
-        data: mask.getAsFloat32Array(),
+        data: mask.getAsFloat32Array().slice(),
         width: mask.width,
         height: mask.height,
       };
       mask.close();
-    }
+    } else this.state.segmentationMask=null;
   }
 }

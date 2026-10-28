@@ -1,14 +1,20 @@
 import * as THREE from 'three';
+import { FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
+import { hormoneGeometry } from './HormoneMolecules';
 import { FontLoader, type FontData } from 'three/examples/jsm/loaders/FontLoader.js';
 import glyphData from '../generators/typography/glyphs.json';
 import type { PoseState } from '../tracking/PoseState';
 
-export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex', 'Crystal Swarm', 'Ribbon Tide', 'Orbital Cathedral', 'Pulse Totems', 'Molecular Dream', 'Origami Storm', 'Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation'] as const;
-export const TYPOGRAPHY_STYLES: readonly string[] = ['Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation'];
+export const GENERATIVE_STYLES = ['Chromatic Organism', 'Razor Bloom', 'Impossible Architecture', 'Liquid Satellites', 'Shattered Sun', 'Velvet Vortex', 'Crystal Swarm', 'Ribbon Tide', 'Orbital Cathedral', 'Pulse Totems', 'Molecular Dream', 'Origami Storm', 'Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation', 'Persian Letters', 'Hebrew Letters', 'Arabic Letters', 'English Letters', 'Russian Letters', 'Cortisol Molecules', 'Adrenaline Molecules', 'Melatonin Molecules', 'Estradiol Molecules', 'Testosterone Molecules', 'Progesterone Molecules'] as const;
+export const LANGUAGE_STYLES: Record<string,string> = { 'Persian Letters':'Persian','Hebrew Letters':'Hebrew','Arabic Letters':'Arabic','English Letters':'English','Russian Letters':'Russian' };
+export const HORMONE_STYLES: Record<string,string> = { 'Cortisol Molecules':'Cortisol','Adrenaline Molecules':'Adrenaline','Melatonin Molecules':'Melatonin','Estradiol Molecules':'Estradiol','Testosterone Molecules':'Testosterone','Progesterone Molecules':'Progesterone' };
+export const TYPOGRAPHY_STYLES: readonly string[] = ['Alphabet Storm', 'Letter Orbit', 'Glyph Rain', 'Language Constellation', ...Object.keys(LANGUAGE_STYLES)];
 const LETTERS: Record<string, string> = {
   Persian: 'ابتثجچحخدذرزژسشصضطظعغفقکگلمنوهیپ',
   English: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   Russian: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+  Hebrew: 'אבגדהוזחטיכלמנסעפצקרשתךםןףץ',
+  Arabic: 'ءآأؤإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىي',
 };
 const font = new FontLoader().parse(glyphData as FontData);
 function letterGeometry(char: string): THREE.BufferGeometry {
@@ -25,7 +31,16 @@ function letterGeometry(char: string): THREE.BufferGeometry {
 export class GenerativeBackground {
   readonly target = new THREE.WebGLRenderTarget(960, 540, { depthBuffer: true });
   readonly texture = this.target.texture;
-  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', paused: false };
+  readonly objectsTarget = new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});
+  readonly objectsTexture = this.objectsTarget.texture;
+  private readonly fillMaterial = new THREE.ShaderMaterial({
+    uniforms:{uObjects:{value:this.objectsTexture},uBase:{value:new THREE.Color()}},
+    vertexShader:'varying vec2 uvPass; void main(){uvPass=uv;gl_Position=vec4(position.xy,0.0,1.0);}',
+    fragmentShader:'varying vec2 uvPass; uniform sampler2D uObjects; uniform vec3 uBase; void main(){vec4 c=texture2D(uObjects,uvPass);gl_FragColor=vec4(c.rgb+uBase*(1.0-c.a),1.0);}',
+    depthTest:false,depthWrite:false,toneMapped:false,
+  });
+  private readonly fillQuad = new FullScreenQuad(this.fillMaterial);
+  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', bodyPlacement: 'Behind body', letterMotion: 'Alphabet Storm', moleculeArrangement: 'Atlas', molecularColors: 'Elements', molecularForm: 'Ball + Stick', paused: false };
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(43, 16 / 9, .1, 100);
   readonly sculpture = new THREE.Group();
@@ -50,12 +65,16 @@ export class GenerativeBackground {
     const s=this.settings;
     const colors=s.palette==='Red / Ink'?['#ed1237','#191119','#ff5634','#840c24']:s.palette==='Graphite'?['#17171c','#bcbcc2','#595965','#f4f4f4']:s.palette==='Electric'?['#ff167d','#2255ff','#10dfff','#ff7315']:['#c6ff05','#ff2063','#6622ff','#00e4c2'];
     const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30, 'Alphabet Storm': 42, 'Letter Orbit': 30, 'Glyph Rain': 54, 'Language Constellation': 36 };
-    const count=Math.round((extras[s.style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
-    const letters = s.alphabet === 'Mixed' ? [LETTERS.Persian!, LETTERS.English!, LETTERS.Russian!] : [LETTERS[s.alphabet] ?? LETTERS.English!];
+    const moleculeName=HORMONE_STYLES[s.style], style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
+    const count=moleculeName?(s.moleculeArrangement==='Atlas'?1:Math.round(7*s.density)):Math.round((extras[style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
+    const alphabet=LANGUAGE_STYLES[s.style] ?? s.alphabet;
+    const letters = alphabet === 'Mixed' ? Object.values(LETTERS) : [LETTERS[alphabet] ?? LETTERS.English!];
     const cache = new Map<string, THREE.BufferGeometry>();
     for(let i=0;i<count;i++) {
       let geometry:THREE.BufferGeometry;
-      if (TYPOGRAPHY_STYLES.includes(s.style)) {
+      if (moleculeName) {
+        geometry=hormoneGeometry(moleculeName,s.molecularForm==='Space filling');
+      } else if (TYPOGRAPHY_STYLES.includes(s.style)) {
         const source=letters[i % letters.length]!;
         const char=source[Math.floor(i / letters.length * 7) % source.length]!;
         let original=cache.get(char);
@@ -76,7 +95,8 @@ export class GenerativeBackground {
         case 'Origami Storm': geometry=new THREE.TetrahedronGeometry(.85);break;
         default: geometry=new THREE.TorusGeometry(1,.22,12,72,Math.PI*1.65);
       }
-      const material=new THREE.MeshPhysicalMaterial({color:colors[i%colors.length],roughness:s.style==='Razor Bloom'?.28:.23,metalness:.22,clearcoat:1,clearcoatRoughness:.12});
+      const molecule=Boolean(moleculeName), elements=molecule&&s.molecularColors==='Elements';
+      const material=new THREE.MeshPhysicalMaterial({vertexColors:elements,color:elements?'#ffffff':colors[i%colors.length],roughness:s.style==='Razor Bloom'?.28:.23,metalness:.22,clearcoat:1,clearcoatRoughness:.12});
       if(s.style==='Ribbon Tide')geometry.userData.basePositions=Float32Array.from(geometry.getAttribute('position').array);
       const mesh=new THREE.Mesh(geometry,material);this.pieces.push(mesh);this.sculpture.add(mesh);
     }
@@ -85,7 +105,7 @@ export class GenerativeBackground {
   update(now:number,aspect:number,pose:PoseState,bodyEnergy:number,sound:number,renderer?:THREE.WebGLRenderer): void {
     if(this.last>=0 && now-this.last<1/30)return;
     const dt=this.last<0?1/30:Math.min(.1,Math.max(0,now-this.last));this.last=now;
-    const s=this.settings, signature=`${s.style}/${s.palette}/${s.density}/${s.alphabet}`;
+    const s=this.settings, signature=`${s.style}/${s.palette}/${s.density}/${s.alphabet}/${s.letterMotion}/${s.moleculeArrangement}/${s.molecularForm}/${s.molecularColors}`;
     if(signature!==this.signature){this.signature=signature;this.rebuild();}
     const body=s.reaction==='Body'||s.reaction==='Body + Sound', audio=s.reaction==='Sound'||s.reaction==='Body + Sound';
     if(!s.paused){
@@ -96,6 +116,7 @@ export class GenerativeBackground {
       this.pointer.lerp(new THREE.Vector2(wrist?(.5-wrist.x)*2:0,wrist?(.5-wrist.y)*2:0),1-Math.exp(-dt*5));
     }
     const t=this.time,p=this.pulse,n=this.pieces.length;
+    const style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
     this.sculpture.scale.setScalar(s.size*(1+p*.1));
     this.sculpture.rotation.set(this.pointer.y*.35+Math.sin(t*.17)*.16,this.pointer.x*.6+t*.12,Math.sin(t*.13)*.15);
     for(let i=0;i<n;i++){
@@ -155,42 +176,51 @@ export class GenerativeBackground {
         mesh.position.set(Math.cos(turn)*radius,Math.sin(turn)*radius,Math.sin(i*1.7+t)*1.4);
         mesh.rotation.set(t*.4+i*.3,t*.3-i*.8,t*.2+i);
         mesh.scale.set(1.2,.18+.15*(1+Math.sin(t+i)),.9+p*.35);
-      }else if(s.style==='Alphabet Storm'){
+      }else if(style==='Alphabet Storm'){
         const turn=i*2.39996+t*.2,radius=.5+f*3+p*.45;
         mesh.position.set(Math.cos(turn)*radius,Math.sin(turn)*radius,Math.sin(i*1.9+t*.7)*2);
         mesh.rotation.set(Math.sin(t*.5+i)*.45,t*.45+i*.25,Math.sin(t*.3+i)*.35);
         mesh.scale.setScalar(.65+(i%4)*.15+p*.12);
-      }else if(s.style==='Letter Orbit'){
+      }else if(style==='Letter Orbit'){
         const ring=i%3,angle=(Math.floor(i/3)/Math.ceil(n/3))*Math.PI*2+t*(ring%2?-.3:.25);
         const radius=1.2+ring*.7+p*.2;
         mesh.position.set(Math.cos(angle)*radius,Math.sin(angle)*radius,Math.sin(angle+ring)*.8);
         mesh.rotation.set(Math.sin(angle)*.3,Math.cos(angle)*.35,angle+Math.PI/2);
         mesh.scale.setScalar(.72+ring*.12);
-      }else if(s.style==='Glyph Rain'){
+      }else if(style==='Glyph Rain'){
         const col=i%9,row=Math.floor(i/9),rows=Math.ceil(n/9);
         const y=(((row/rows-t*(.04+(col%3)*.01))%1+1)%1-.5)*6;
         mesh.position.set((col-4)*.85+.12*Math.sin(t+i),y,Math.sin(col*3+row)*1.2);
         mesh.rotation.set(.12*Math.sin(t+i),Math.sin(t*.3+i)*.35,Math.sin(i+t*.3)*.15);
         mesh.scale.setScalar(.8+p*.2);
-      }else if(s.style==='Language Constellation'){
+      }else if(style==='Language Constellation'){
         const lat=Math.acos(1-2*(i+.5)/n),lon=i*2.39996+t*.14,radius=2.2+p*.4;
         mesh.position.set(Math.sin(lat)*Math.cos(lon)*radius,Math.cos(lat)*radius,Math.sin(lat)*Math.sin(lon)*radius);
         mesh.rotation.set(Math.sin(lat+t)*.25,lon*.35,Math.sin(lon)*.25);mesh.scale.setScalar(.7+.12*Math.sin(t+i));
+      }else if(HORMONE_STYLES[s.style]&&s.moleculeArrangement==='Atlas'){
+        mesh.rotation.set(Math.sin(t*.25)*.45,t*.25,Math.sin(t*.15)*.18);
+        mesh.scale.setScalar(1.25+p*.1);
+      }else if(HORMONE_STYLES[s.style]){
+        const radius=1.8+p*.25;
+        mesh.position.set(Math.cos(a+t*.16)*radius,Math.sin(a+t*.16)*radius,Math.sin(a*2+t*.2)*1.2);
+        mesh.rotation.set(a+t*.2,t*.3+i,Math.sin(a+t*.2)*.3);mesh.scale.setScalar(.38+.14*(i%3)/2);
       }else{
         mesh.position.z=(f-.5)*4;mesh.rotation.set(Math.sin(t*.3+f*3)*.35,Math.cos(t*.2+f*4)*.35,a+t*.4);
         mesh.scale.setScalar(.6+f*1.9+p*.15);
       }
     }
-    this.scene.background=new THREE.Color(s.base==='White'?'#ffffff':'#08070e');
+    this.scene.background=null;
+    (this.fillMaterial.uniforms.uBase!.value as THREE.Color).set(s.base==='White'?'#ffffff':'#08070e');
     this.camera.aspect=aspect;this.camera.position.z=aspect<1?10/aspect:10;this.camera.updateProjectionMatrix();
-    const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height)this.target.setSize(960,height);
+    const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height){this.target.setSize(960,height);this.objectsTarget.setSize(960,height);}
     if(renderer){
       const previous=renderer.getRenderTarget(),autoClear=renderer.autoClear;
       const viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
       const xr=renderer.xr.enabled;
-      try{renderer.xr.enabled=false;renderer.autoClear=true;renderer.setRenderTarget(this.target);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);}
-      finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;renderer.xr.enabled=xr;}
+      const clearColor=renderer.getClearColor(new THREE.Color()).clone(),clearAlpha=renderer.getClearAlpha();
+      try{renderer.xr.enabled=false;renderer.autoClear=true;renderer.setClearColor(0,0);renderer.setRenderTarget(this.objectsTarget);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);renderer.setRenderTarget(this.target);this.fillQuad.render(renderer);}
+      finally{renderer.setClearColor(clearColor,clearAlpha);renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;renderer.xr.enabled=xr;}
     }
   }
-  dispose():void{this.clearPieces();this.target.dispose();}
+  dispose():void{this.clearPieces();this.target.dispose();this.objectsTarget.dispose();this.fillMaterial.dispose();this.fillQuad.dispose();}
 }

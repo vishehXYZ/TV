@@ -27,12 +27,29 @@ function letterGeometry(char: string): THREE.BufferGeometry {
   geometry.scale(.8 / extent, .8 / extent, 1);
   return geometry;
 }
+export const GENERATIVE_PALETTES: Record<string, string[]> = {
+  Acid: ['#c6ff05','#ff2063','#6622ff','#00e4c2'],
+  Electric: ['#ff167d','#2255ff','#10dfff','#ff7315'],
+  'Red / Ink': ['#ed1237','#191119','#ff5634','#840c24'],
+  Graphite: ['#17171c','#bcbcc2','#595965','#f4f4f4'],
+  'Cobalt / Vermilion': ['#1648ff','#f23d22','#172747','#ffbd42'],
+  'Paper / Crimson': ['#920b26','#e92535','#231c28','#fe7651'],
+  'Ultraviolet': ['#5c13e6','#cb29ff','#ff2983','#236bff'],
+  'Petrol / Copper': ['#006a75','#16b6a7','#d45d35','#f2aa76'],
+  'Emerald / Fuchsia': ['#027e54','#20d994','#ef1a83','#8c0b68'],
+  'Solar': ['#ffca18','#ff611a','#c9133b','#671840'],
+  'Ice / Silver': ['#d3edf5','#618ba9','#71839e','#f5f8ff'],
+  'Ink / Gold': ['#20212c','#98702e','#d6af50','#f7e3a8'],
+};
 /** Independent 3D stage rendered with the app's renderer; no second WebGL context. */
 export class GenerativeBackground {
   readonly target = new THREE.WebGLRenderTarget(960, 540, { depthBuffer: true });
   readonly texture = this.target.texture;
   readonly objectsTarget = new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});
   readonly objectsTexture = this.objectsTarget.texture;
+  readonly nearTarget = new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});
+  private readonly bodyPlane = new THREE.Plane(new THREE.Vector3(0,0,1),0);
+  get frontTexture(): THREE.Texture { return this.settings.bodyPlacement==='Inside 3D space'?this.nearTarget.texture:this.objectsTexture; }
   private readonly fillMaterial = new THREE.ShaderMaterial({
     uniforms:{uObjects:{value:this.objectsTexture},uBase:{value:new THREE.Color()}},
     vertexShader:'varying vec2 uvPass; void main(){uvPass=uv;gl_Position=vec4(position.xy,0.0,1.0);}',
@@ -40,7 +57,7 @@ export class GenerativeBackground {
     depthTest:false,depthWrite:false,toneMapped:false,
   });
   private readonly fillQuad = new FullScreenQuad(this.fillMaterial);
-  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', bodyPlacement: 'Behind body', letterMotion: 'Alphabet Storm', moleculeArrangement: 'Atlas', molecularColors: 'Elements', molecularForm: 'Ball + Stick', paused: false };
+  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', bodyPlacement: 'Behind body', bodyDepth: 0, letterMotion: 'Alphabet Storm', moleculeArrangement: 'Swarm', molecularColors: 'Elements', molecularForm: 'Ball + Stick', paused: false };
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(43, 16 / 9, .1, 100);
   readonly sculpture = new THREE.Group();
@@ -63,17 +80,20 @@ export class GenerativeBackground {
   private rebuild(): void {
     this.clearPieces();
     const s=this.settings;
-    const colors=s.palette==='Red / Ink'?['#ed1237','#191119','#ff5634','#840c24']:s.palette==='Graphite'?['#17171c','#bcbcc2','#595965','#f4f4f4']:s.palette==='Electric'?['#ff167d','#2255ff','#10dfff','#ff7315']:['#c6ff05','#ff2063','#6622ff','#00e4c2'];
+    const colors=GENERATIVE_PALETTES[s.palette] ?? GENERATIVE_PALETTES.Acid!;
     const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30, 'Alphabet Storm': 42, 'Letter Orbit': 30, 'Glyph Rain': 54, 'Language Constellation': 36 };
     const moleculeName=HORMONE_STYLES[s.style], style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
-    const count=moleculeName?(s.moleculeArrangement==='Atlas'?1:Math.round(7*s.density)):Math.round((extras[style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
+    const count=moleculeName?(s.moleculeArrangement==='Atlas'?1:Math.round(36*s.density)):Math.round((extras[style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
     const alphabet=LANGUAGE_STYLES[s.style] ?? s.alphabet;
     const letters = alphabet === 'Mixed' ? Object.values(LETTERS) : [LETTERS[alphabet] ?? LETTERS.English!];
     const cache = new Map<string, THREE.BufferGeometry>();
     for(let i=0;i<count;i++) {
       let geometry:THREE.BufferGeometry;
       if (moleculeName) {
-        geometry=hormoneGeometry(moleculeName,s.molecularForm==='Space filling');
+        const key=`molecule:${moleculeName}`;
+        let original=cache.get(key);
+        if(!original){original=hormoneGeometry(moleculeName,s.molecularForm==='Space filling');cache.set(key,original);}
+        geometry=original.clone();
       } else if (TYPOGRAPHY_STYLES.includes(s.style)) {
         const source=letters[i % letters.length]!;
         const char=source[Math.floor(i / letters.length * 7) % source.length]!;
@@ -115,6 +135,7 @@ export class GenerativeBackground {
       const wrist=body&&pose.hasDetection?pose.landmarks[15]:undefined;
       this.pointer.lerp(new THREE.Vector2(wrist?(.5-wrist.x)*2:0,wrist?(.5-wrist.y)*2:0),1-Math.exp(-dt*5));
     }
+    this.camera.aspect=aspect;
     const t=this.time,p=this.pulse,n=this.pieces.length;
     const style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
     this.sculpture.scale.setScalar(s.size*(1+p*.1));
@@ -201,9 +222,14 @@ export class GenerativeBackground {
         mesh.rotation.set(Math.sin(t*.25)*.45,t*.25,Math.sin(t*.15)*.18);
         mesh.scale.setScalar(1.25+p*.1);
       }else if(HORMONE_STYLES[s.style]){
-        const radius=1.8+p*.25;
-        mesh.position.set(Math.cos(a+t*.16)*radius,Math.sin(a+t*.16)*radius,Math.sin(a*2+t*.2)*1.2);
-        mesh.rotation.set(a+t*.2,t*.3+i,Math.sin(a+t*.2)*.3);mesh.scale.setScalar(.38+.14*(i%3)/2);
+        // Distribute across the viewport and through depth, rather than around a single ring.
+        const columns=Math.max(3,Math.ceil(Math.sqrt(n*this.camera.aspect)));
+        const rows=Math.ceil(n/columns),column=i%columns,row=Math.floor(i/columns);
+        const x=((column+.5)/columns-.5)*7.8*Math.max(1,this.camera.aspect);
+        const y=((row+.5)/rows-.5)*7.8;
+        const z=Math.sin(i*2.39996+t*.18)*2.6;
+        mesh.position.set(x+Math.sin(t*.25+i)*.35,y+Math.cos(t*.2+i*1.7)*.3,z);
+        mesh.rotation.set(a+t*.2,t*.3+i,Math.sin(a+t*.2)*.3);mesh.scale.setScalar(.32+.22*((i*7)%11)/10);
       }else{
         mesh.position.z=(f-.5)*4;mesh.rotation.set(Math.sin(t*.3+f*3)*.35,Math.cos(t*.2+f*4)*.35,a+t*.4);
         mesh.scale.setScalar(.6+f*1.9+p*.15);
@@ -212,15 +238,25 @@ export class GenerativeBackground {
     this.scene.background=null;
     (this.fillMaterial.uniforms.uBase!.value as THREE.Color).set(s.base==='White'?'#ffffff':'#08070e');
     this.camera.aspect=aspect;this.camera.position.z=aspect<1?10/aspect:10;this.camera.updateProjectionMatrix();
-    const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height){this.target.setSize(960,height);this.objectsTarget.setSize(960,height);}
+    const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height){this.target.setSize(960,height);this.objectsTarget.setSize(960,height);this.nearTarget.setSize(960,height);}
     if(renderer){
       const previous=renderer.getRenderTarget(),autoClear=renderer.autoClear;
       const viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
-      const xr=renderer.xr.enabled;
+      const xr=renderer.xr.enabled,clippingPlanes=renderer.clippingPlanes;
       const clearColor=renderer.getClearColor(new THREE.Color()).clone(),clearAlpha=renderer.getClearAlpha();
-      try{renderer.xr.enabled=false;renderer.autoClear=true;renderer.setClearColor(0,0);renderer.setRenderTarget(this.objectsTarget);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);renderer.setRenderTarget(this.target);this.fillQuad.render(renderer);}
-      finally{renderer.setClearColor(clearColor,clearAlpha);renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;renderer.xr.enabled=xr;}
+      try{
+        renderer.xr.enabled=false;renderer.autoClear=true;renderer.setClearColor(0,0);
+        renderer.setRenderTarget(this.objectsTarget);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);
+        if(s.bodyPlacement==='Inside 3D space'){
+          this.bodyPlane.constant=-s.bodyDepth;
+          renderer.clippingPlanes=[...(clippingPlanes??[]),this.bodyPlane];
+          renderer.setRenderTarget(this.nearTarget);renderer.render(this.scene,this.camera);
+        }
+        renderer.clippingPlanes=clippingPlanes;
+        renderer.setRenderTarget(this.target);this.fillQuad.render(renderer);
+      }
+      finally{renderer.clippingPlanes=clippingPlanes;renderer.setClearColor(clearColor,clearAlpha);renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;renderer.xr.enabled=xr;}
     }
   }
-  dispose():void{this.clearPieces();this.target.dispose();this.objectsTarget.dispose();this.fillMaterial.dispose();this.fillQuad.dispose();}
+  dispose():void{this.clearPieces();this.target.dispose();this.objectsTarget.dispose();this.nearTarget.dispose();this.fillMaterial.dispose();this.fillQuad.dispose();}
 }

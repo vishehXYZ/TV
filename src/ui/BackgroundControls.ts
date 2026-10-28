@@ -1,5 +1,5 @@
 import { HORMONES } from '../core/HormoneMolecules';
-import { GENERATIVE_STYLES, TYPOGRAPHY_STYLES, LANGUAGE_STYLES, HORMONE_STYLES } from '../core/GenerativeBackground';
+import { GENERATIVE_STYLES, TYPOGRAPHY_STYLES, GENERATIVE_PALETTES, LANGUAGE_STYLES, HORMONE_STYLES } from '../core/GenerativeBackground';
 import { BackgroundLayer } from '../core/BackgroundLayer';
 
 /** Brightness/contrast/saturation combos for the one-click filter presets — kept alongside the raw
@@ -123,7 +123,7 @@ export class BackgroundControls {
     const alphabetSelect=genSelect('Alphabet',['Mixed','Persian','Hebrew','Arabic','English','Russian'],'alphabet');
     const alphabetRow=alphabetSelect.parentElement!;
     const letterMotionSelect=genSelect('Letter movement',['Alphabet Storm','Letter Orbit','Glyph Rain','Language Constellation'],'letterMotion');
-    const arrangementSelect=genSelect('Molecule layout',['Atlas','Swarm'],'moleculeArrangement');
+    const arrangementSelect=genSelect('Molecule layout',['Swarm','Atlas'],'moleculeArrangement');
     const moleculeColorsSelect=genSelect('Atom colors',['Elements','Palette'],'molecularColors');
     const moleculeFormSelect=genSelect('Molecule form',['Ball + Stick','Space filling'],'molecularForm');
     const formula=document.createElement('small');formula.className='molecule-formula';generatorPanel.append(formula);
@@ -136,17 +136,24 @@ export class BackgroundControls {
     };
     styleSelect.addEventListener('change',syncAlphabetVisibility);syncAlphabetVisibility();
     const reactionSelect=genSelect('React to',['Body + Sound','Automatic','Body','Sound'],'reaction');
-    const paletteSelect=genSelect('Colors',['Acid','Electric','Red / Ink','Graphite'],'palette');
+    const paletteSelect=genSelect('Colors',Object.keys(GENERATIVE_PALETTES),'palette');
+    paletteSelect.addEventListener('change',()=>{
+      if(HORMONE_STYLES[styleSelect.value]){moleculeColorsSelect.value='Palette';if(background.generator)background.generator.settings.molecularColors='Palette';}
+    });
     const baseSelect=genSelect('Base',['Black','White'],'base');
-    const bodyPlacementSelect=genSelect('3D / Body',['Behind body','Across body'],'bodyPlacement');
-    const bodyHint=document.createElement('small');bodyHint.textContent='For your camera image, enable Foreground > Self View. The camera background is removed while Generative is active. Behind body keeps shapes underneath; Across body draws shapes over the image and effects.';generatorPanel.append(bodyHint);
-    const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'sensitivity']> = [];
-    for(const [label,key,min,max] of [['Speed','speed',0,300],['Density','density',25,250],['Size','size',40,200],['Reaction strength','sensitivity',0,300]] as const) {
+    const bodyPlacementSelect=genSelect('3D / Body',['Behind body','Across body','Inside 3D space'],'bodyPlacement');
+    const bodyHint=document.createElement('small');bodyHint.textContent='For your camera image, enable Foreground > Self View. The camera background is removed while Generative is active. Behind body keeps shapes underneath; Across body draws shapes over the image and effects. Inside 3D space surrounds you, with geometry both behind and in front. Body depth moves your position within this space.';generatorPanel.append(bodyHint);
+    const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'sensitivity'|'bodyDepth']> = [];
+    for(const [label,key,min,max,initial] of [['Speed','speed',0,300,100],['Density','density',25,250,100],['Size','size',40,200,100],['Reaction strength','sensitivity',0,300,100],['Body depth','bodyDepth',-300,300,0]] as const) {
       const row=document.createElement('label');row.className='opacity-row';row.textContent=label;
-      const input=document.createElement('input');input.type='range';input.min=String(min);input.max=String(max);input.value='100';
-      const value=document.createElement('span');value.textContent='1.00';
+      const input=document.createElement('input');input.type='range';input.min=String(min);input.max=String(max);input.value=String(initial);
+      const value=document.createElement('span');value.textContent=(initial/100).toFixed(2);
       input.addEventListener('input',()=>{value.textContent=(Number(input.value)/100).toFixed(2);if(background.generator)background.generator.settings[key]=Number(input.value)/100;});
       genSliders.push([input,key]);row.append(input,value);generatorPanel.append(row);
+      if(key==='bodyDepth'){
+        const syncDepth=()=>{row.style.display=bodyPlacementSelect.value==='Inside 3D space'?'flex':'none';};
+        bodyPlacementSelect.addEventListener('change',syncDepth);syncDepth();
+      }
     }
     const pauseGen=document.createElement('button');pauseGen.className='background-button';pauseGen.textContent='Pause animation';
     pauseGen.addEventListener('click',()=>{const g=background.generator;if(g){g.settings.paused=!g.settings.paused;pauseGen.textContent=g.settings.paused?'Resume animation':'Pause animation';}});generatorPanel.append(pauseGen);

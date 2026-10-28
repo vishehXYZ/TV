@@ -40,9 +40,9 @@ export class BackgroundLayer {
     if (this.mode !== 'generative' || !this.generator) return;
     this.generator.update(time, this.sceneManager.aspect, pose, body, audio, this.sceneManager.renderer);
     this.sourceAspect = this.sceneManager.aspect;
-    this.crossingMaterial.setMap(this.generator.objectsTexture);
+    this.crossingMaterial.setMap(this.generator.frontTexture);
     this.crossingMesh.scale.set(this.sceneManager.aspect,1,1);
-    this.crossingMesh.visible=this.drivesBackdrop && this.generator.settings.bodyPlacement==='Across body';
+    this.crossingMesh.visible=this.drivesBackdrop && this.generator.settings.bodyPlacement!=='Behind body';
   }
 
   private sceneManager: SceneManager;

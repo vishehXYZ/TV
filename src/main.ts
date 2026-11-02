@@ -184,7 +184,7 @@ soundControls.container.append(new MotionSoundControls(motionSound).container);
 let lastElapsed = 0;
 let lastDt = 1 / 60;
 const renderFrame = (): void => {
-  const backgroundBodyEnergy = poseTracker.state.hasDetection ? poseTracker.state.energy : 0;
+  const backgroundBodyEnergy = !audioReactor.musicOnly && poseTracker.state.hasDetection ? poseTracker.state.energy : 0;
   motionSound.update(poseTracker.state);
   motionSound.mix(audioReactor.audioStream);
   const chaosActive = ['scribbleGlitch', 'numberGlitch', 'chaosMix'].includes(appState.mode);
@@ -200,9 +200,9 @@ const renderFrame = (): void => {
   selfViewToggleButton.classList.toggle('active', foregroundLayer.mode === 'camera');
 
   if(audioReactor.isActive)audioReactor.update();
-  syncVisualPose(visualPose,poseTracker.state,audioReactor.isActive?audioReactor.motionEnergy:0);
+  syncVisualPose(visualPose,poseTracker.state,audioReactor.isActive?audioReactor.motionEnergy:0,audioReactor.musicOnly);
   soundControls.refreshSignal();
-  backgroundLayer.updateGenerative(lastElapsed, poseTracker.state, backgroundBodyEnergy, audioReactor.isActive && audioReactor.reactionEnabled ? Math.max(audioReactor.level, audioReactor.kick) : 0);
+  backgroundLayer.updateGenerative(lastElapsed, audioReactor.musicOnly?visualPose:poseTracker.state, backgroundBodyEnergy, audioReactor.isActive && audioReactor.reactionEnabled ? audioReactor.visualLevel : 0);
   const audioBands = audioReactor.isActive && audioReactor.reactionEnabled
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
@@ -279,7 +279,7 @@ const renderFrame = (): void => {
       revealMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
   }
-  if(appState.mode==='none'){
+  if(appState.mode==='none'||audioReactor.musicOnly){
     if(foregroundLayer.mode==='camera') foregroundLayer.mesh.visible=false;
     if(backgroundLayer.mode==='camera') backgroundLayer.mesh.visible=false;
   }
@@ -287,8 +287,8 @@ const renderFrame = (): void => {
   sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, backgroundLayer.generator?.settings.bodyPlacement, backgroundLayer.generator?.settings.bodyDepth, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
-  sceneManager.bodyVolumePass.configure({...appState.bodyVolume,enabled:appState.bodyVolume.enabled && appState.mode!=='none'},poseTracker.state,sceneManager.aspect);
-  sceneManager.bodyContourPass.configure({...appState.bodyContours,enabled:appState.bodyContours.enabled && appState.mode!=='none'},poseTracker.state,sceneManager.aspect,appState.palette[3]!,video);
+  sceneManager.bodyVolumePass.configure({...appState.bodyVolume,enabled:appState.bodyVolume.enabled && appState.mode!=='none' && !audioReactor.musicOnly},poseTracker.state,sceneManager.aspect);
+  sceneManager.bodyContourPass.configure({...appState.bodyContours,enabled:appState.bodyContours.enabled && appState.mode!=='none' && !audioReactor.musicOnly},poseTracker.state,sceneManager.aspect,appState.palette[3]!,video);
   sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);
   sceneManager.render();
 };

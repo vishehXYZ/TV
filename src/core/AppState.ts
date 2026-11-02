@@ -10,6 +10,8 @@ export interface PalettePreset {
 }
 
 export const PALETTE_PRESETS: PalettePreset[] = [
+  { name: 'Pure Gold', colors: ['#d4af37', '#d4af37', '#d4af37', '#d4af37', '#d4af37'] },
+  { name: 'Pure Silver', colors: ['#c0c0c0', '#c0c0c0', '#c0c0c0', '#c0c0c0', '#c0c0c0'] },
   { name: 'Paper / Scarlet Ink', colors: ['#ff1025', '#e00016', '#ff3c20', '#b90020', '#ff6050'] },
   { name: 'Paper / Red & Graphite', colors: ['#fefefe', '#f62a24', '#bcbcbc', '#ff451d', '#eeeeee'] },
   { name: 'Graphite Pencil', colors: ['#ffffff', '#dddddd', '#aaaaaa', '#f6f6f6', '#c2c2c2'] },

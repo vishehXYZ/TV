@@ -40,6 +40,8 @@ export const GENERATIVE_PALETTES: Record<string, string[]> = {
   'Solar': ['#ffca18','#ff611a','#c9133b','#671840'],
   'Ice / Silver': ['#d3edf5','#618ba9','#71839e','#f5f8ff'],
   'Ink / Gold': ['#20212c','#98702e','#d6af50','#f7e3a8'],
+  'Pure Gold': ['#d4af37','#d4af37','#d4af37','#d4af37'],
+  'Pure Silver': ['#c0c0c0','#c0c0c0','#c0c0c0','#c0c0c0'],
 };
 /** Independent 3D stage rendered with the app's renderer; no second WebGL context. */
 export class GenerativeBackground {
@@ -66,6 +68,7 @@ export class GenerativeBackground {
   private time = 0;
   private last = -1;
   private pulse = 0;
+  private audioMotion=0;
   private pointer = new THREE.Vector2();
   private baselineShoulders: number | null = null;
   private followingInside = false;
@@ -136,6 +139,8 @@ export class GenerativeBackground {
     const body=s.reaction==='Body'||s.reaction==='Body + Sound', audio=s.reaction==='Sound'||s.reaction==='Body + Sound';
     if(!s.paused){
       const energy=Math.min(2,((body?bodyEnergy:0)+(audio?sound:0))*s.sensitivity);
+      const audioTarget=audio?Math.min(1.5,sound*s.sensitivity):0;
+      this.audioMotion+=(audioTarget-this.audioMotion)*(1-Math.exp(-dt*12));
       this.pulse+=(energy-this.pulse)*(1-Math.exp(-dt*9));
       this.time+=dt*s.speed*(s.reaction==='Automatic'?1:.35+this.pulse*1.4);
       const wrist=body&&pose.hasDetection?pose.landmarks[15]:undefined;
@@ -164,8 +169,8 @@ export class GenerativeBackground {
     this.bodyPlane.constant=-(s.bodyDepth+this.trackedDepth)*this.bodyPlane.normal.z;
     const t=this.time,p=this.pulse,n=this.pieces.length;
     const style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
-    this.sculpture.scale.setScalar(s.size*(1+p*.1));
-    this.sculpture.rotation.set(this.pointer.y*.35+Math.sin(t*.17)*.16,this.pointer.x*.6+t*.12,Math.sin(t*.13)*.15);
+    this.sculpture.scale.setScalar(s.size*(1+p*.1+this.audioMotion*.2));
+    this.sculpture.rotation.set(this.pointer.y*.35+Math.sin(t*.17)*.16,this.pointer.x*.6+t*.12,Math.sin(t*.13)*.15+Math.sin(t*1.7)*this.audioMotion*.12);
     for(let i=0;i<n;i++){
       const mesh=this.pieces[i]!,f=i/n,a=f*Math.PI*2;
       mesh.scale.setScalar(1);mesh.position.set(0,0,0);mesh.rotation.set(0,0,0);
@@ -262,6 +267,17 @@ export class GenerativeBackground {
       }
     }
     for(const mesh of this.pieces)mesh.scale.multiplyScalar(s.symbolSize);
+    // Monochrome metal palettes use neutral lights, so colored studio lights cannot tint them.
+    const pureMetal=s.palette==='Pure Gold'||s.palette==='Pure Silver';
+    for(const light of this.scene.children){
+      if(!(light instanceof THREE.Light))continue;
+      if(light.userData.originalColor===undefined)light.userData.originalColor=light.color.getHex();
+      light.color.set(pureMetal?0xffffff:light.userData.originalColor);
+      if(light instanceof THREE.HemisphereLight){
+        if(light.userData.originalGround===undefined)light.userData.originalGround=light.groundColor.getHex();
+        light.groundColor.set(pureMetal?0x292929:light.userData.originalGround);
+      }
+    }
     this.scene.background=null;
     if(inside&&s.atmosphere>0){
       const z=aspect<1?10/aspect:10;

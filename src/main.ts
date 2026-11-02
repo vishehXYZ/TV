@@ -14,6 +14,8 @@ import { AppState } from './core/AppState';
 import { BackgroundLayer } from './core/BackgroundLayer';
 import { BackgroundControls } from './ui/BackgroundControls';
 import { PoseTracker } from './tracking/PoseTracker';
+import { PoseState } from './tracking/PoseState';
+import { syncVisualPose } from './tracking/VisualPose';
 import { AudioReactor } from './tracking/AudioReactor';
 import { SoundControls } from './ui/SoundControls';
 import { FillMode } from './modes/FillMode';
@@ -53,6 +55,8 @@ const appRoot = document.querySelector<HTMLDivElement>('#app')!;
 
 const sceneManager = new SceneManager(canvas);
 const poseTracker = new PoseTracker(video);
+const visualPose=new PoseState();
+const visualTracker=new Proxy(poseTracker,{get(target,key,receiver){return key==='state'?visualPose:Reflect.get(target,key,receiver);}});
 const audioReactor = new AudioReactor();
 const appState = new AppState();
 const backgroundLayer = new BackgroundLayer(sceneManager);
@@ -194,104 +198,84 @@ const renderFrame = (): void => {
   controlPanel.syncVisibility();
   selfViewToggleButton.classList.toggle('active', foregroundLayer.mode === 'camera');
 
-  // Max-blend (not add) so sound only ever boosts the existing movement-energy signal instead of
-  // compounding across frames — every mode reacts to this same poseTracker.state.energy value
-  // (growth speed, particle spawn rate, glitch intensity, rotation speed, pulse, etc.), so sound
-  // alone drives a genuinely animated "dance" through each mode's own harmonic time-based motion —
-  // no fabricated body/landmarks needed. audioReactor.level already includes a sustained
-  // beat-triggered pulse (see AudioReactor.update()), so a detected beat/onset stays visible for
-  // about a second rather than a single invisible frame.
-  if (audioReactor.isActive) {
-    audioReactor.update();
-    if (poseTracker.state.hasDetection) {
-      // Kick blended in too (not just the general level/pulse) — a punchier, more clearly beat-synced
-      // pop for every mode already reacting to poseTracker.state.energy. Max against the real movement
-      // energy so sound only ever boosts it, never fights it.
-      poseTracker.state.energy = Math.max(poseTracker.state.energy, audioReactor.level, audioReactor.kick * 0.8);
-    } else {
-      // No body (tracking paused) — audio is the ONLY signal, so replace rather than max-blend. Maxing
-      // against state.energy here would just be maxing against last frame's own already-blended value,
-      // a self-referential ratchet that only ever climbs to the loudest moment so far and never comes
-      // back down — killing the beat-to-beat pulse entirely. Assigning it fresh each frame lets energy
-      // rise and fall with the actual live music, which is what makes it read as dancing, not just "on".
-      poseTracker.state.energy = Math.max(audioReactor.level, audioReactor.kick * 0.8);
-    }
-  }
+  if(audioReactor.isActive)audioReactor.update();
+  syncVisualPose(visualPose,poseTracker.state,audioReactor.isActive?audioReactor.motionEnergy:0);
+  soundControls.refreshSignal();
   backgroundLayer.updateGenerative(lastElapsed, poseTracker.state, backgroundBodyEnergy, audioReactor.isActive ? Math.max(audioReactor.level, audioReactor.kick) : 0);
   const audioBands = audioReactor.isActive
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
   switch (appState.mode) {
     case 'verticalLines': case 'scribbleGlitch': case 'numberGlitch': case 'chaosMix': case 'bodyFlames': case 'bodyRibbons': case 'bodyPrism': case 'geoPortal': case 'geoOrbits': case 'geoFracture': case 'dualTexture': case 'dualTextureReverse':
-      surfaces[appState.mode].update(poseTracker, appState, lastElapsed); break;
+      surfaces[appState.mode].update(visualTracker, appState, lastElapsed); break;
     case 'fill':
-      fillMode.update(poseTracker, appState, lastElapsed);
+      fillMode.update(visualTracker, appState, lastElapsed);
       break;
     case 'dance':
-      danceMode.update(poseTracker, appState, lastElapsed, lastDt);
+      danceMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'code':
-      codeMode.update(poseTracker, appState, lastElapsed, lastDt);
+      codeMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'codeInside':
-      codeInsideMode.update(poseTracker, appState, lastElapsed, lastDt);
+      codeInsideMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'script':
-      scriptMode.update(poseTracker, appState, lastElapsed, lastDt);
+      scriptMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'scriptInside':
-      scriptInsideMode.update(poseTracker, appState, lastElapsed, lastDt);
+      scriptInsideMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'nature':
-      natureMode.update(poseTracker, appState, lastElapsed, lastDt);
+      natureMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'lightning':
-      lightningMode.update(poseTracker, appState, lastElapsed, lastDt);
+      lightningMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'abstractFill':
-      abstractFillMode.update(poseTracker, appState, lastElapsed, lastDt);
+      abstractFillMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'abstractGrow':
-      abstractGrowMode.update(poseTracker, appState, lastElapsed, lastDt);
+      abstractGrowMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'dissolve':
-      dissolveMode.update(poseTracker, appState, lastElapsed, lastDt);
+      dissolveMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'dissolveLines':
-      dissolveLinesMode.update(poseTracker, appState, lastElapsed, lastDt);
+      dissolveLinesMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'mandala':
-      mandalaMode.update(poseTracker, appState, lastElapsed, audioBands);
+      mandalaMode.update(visualTracker, appState, lastElapsed, audioBands);
       break;
     case 'pixelMelt':
-      pixelMeltMode.update(poseTracker, appState, lastElapsed, lastDt);
+      pixelMeltMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'glitch':
-      glitchMode.update(poseTracker, appState, lastElapsed, lastDt);
+      glitchMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'glitchMono':
-      glitchMonoMode.update(poseTracker, appState, lastElapsed, lastDt);
+      glitchMonoMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'glitchLines':
-      glitchLinesMode.update(poseTracker, appState, lastElapsed, lastDt);
+      glitchLinesMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'distortGlitch':
-      distortGlitchMode.update(poseTracker, appState, lastElapsed, lastDt);
+      distortGlitchMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'chroma':
-      chromaMode.update(poseTracker, appState, lastElapsed);
+      chromaMode.update(visualTracker, appState, lastElapsed);
       break;
     case 'chromaGeo':
-      chromaGeoMode.update(poseTracker, appState, lastElapsed);
+      chromaGeoMode.update(visualTracker, appState, lastElapsed);
       break;
     case 'sketch':
-      sketchMode.update(poseTracker, appState, lastElapsed);
+      sketchMode.update(visualTracker, appState, lastElapsed);
       break;
     case 'ripple':
-      rippleMode.update(poseTracker, appState, lastElapsed, lastDt);
+      rippleMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
     case 'reveal':
-      revealMode.update(poseTracker, appState, lastElapsed, lastDt);
+      revealMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
   }
   foregroundLayer.setBodyIsolation(poseTracker.state,backgroundLayer.mode==='generative');

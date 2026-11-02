@@ -13,6 +13,8 @@ export class SoundControls {
   private playPauseBtn: HTMLButtonElement;
   private back10Btn: HTMLButtonElement;
   private fwd10Btn: HTMLButtonElement;
+  private meter: HTMLMeterElement;
+  private signalText: HTMLSpanElement;
 
   constructor(audioReactor: AudioReactor) {
     this.audioReactor = audioReactor;
@@ -75,7 +77,20 @@ export class SoundControls {
     this.transportRow.style.display = 'none';
     this.transportRow.append(this.back10Btn, this.playPauseBtn, this.fwd10Btn);
 
-    this.container.append(label, row, this.transportRow);
+    const reaction=document.createElement('label');reaction.className='opacity-row';reaction.textContent='Music reaction';
+    const strength=document.createElement('input');strength.type='range';strength.min='0';strength.max='300';strength.value=String(audioReactor.sensitivity*100);
+    const amount=document.createElement('span');amount.textContent=audioReactor.sensitivity.toFixed(2);
+    strength.addEventListener('input',()=>{audioReactor.sensitivity=Number(strength.value)/100;amount.textContent=audioReactor.sensitivity.toFixed(2);});reaction.append(strength,amount);
+    const signal=document.createElement('div');signal.className='opacity-row';
+    this.meter=document.createElement('meter');this.meter.min=0;this.meter.max=1;this.meter.setAttribute('aria-label','Live music signal');this.meter.style.flex='1';
+    this.signalText=document.createElement('span');this.signalText.textContent='No audio input';signal.append(this.meter,this.signalText);
+    const hint=document.createElement('small');hint.textContent='Load a track with Music, or use Mic for sound in the room. Reaction strength does not change playback volume.';
+    this.container.append(label, row, this.transportRow,reaction,signal,hint);
+  }
+
+  refreshSignal():void{
+    this.meter.value=Math.min(1,this.audioReactor.level);
+    this.signalText.textContent=!this.audioReactor.isActive?'No audio input':this.audioReactor.isPaused?'Music paused':this.audioReactor.contextState!=='running'?'Audio suspended':this.audioReactor.source==='music'?'Music signal':'Mic signal';
   }
 
   private togglePlayPause(): void {
@@ -86,6 +101,7 @@ export class SoundControls {
       this.audioReactor.pause();
       this.playPauseBtn.textContent = 'Play';
     }
+    this.refreshSignal();
   }
 
   private async enableMic(): Promise<void> {
@@ -136,6 +152,7 @@ export class SoundControls {
     this.uploadBtn.classList.remove('active');
     this.stopBtn.style.display = 'none';
     this.transportRow.style.display = 'none';
+    this.refreshSignal();
   }
 
   private setButtonsDisabled(disabled: boolean): void {

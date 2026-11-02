@@ -118,6 +118,13 @@ export class ControlPanel {
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
     this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
 
+    const volumeFolder=this.addSectionFolder('3D Body (all modes)','effects');
+    volumeFolder.addBinding(appState.bodyVolume,'enabled',{label:'Enable 3D body'});
+    volumeFolder.addBinding(appState.bodyVolume,'depth',{label:'Body volume',min:0,max:2,step:.05});
+    volumeFolder.addBinding(appState.bodyVolume,'lighting',{label:'3D lighting',min:0,max:1,step:.05});
+    volumeFolder.addBinding(appState.bodyVolume,'lightAngle',{label:'Light direction',min:-80,max:80,step:1});
+    volumeFolder.addButton({title:'Reset 3D body'}).on('click',()=>{Object.assign(appState.bodyVolume,{depth:1,lighting:.75,lightAngle:-35});this.pane.refresh();});
+
     const lineFolder = this.addSectionFolder('Line weight (all modes)', 'lines');
     lineFolder.addBinding(appState, 'lineWeight', { label: 'Thickness', min: 0.3, max: 3, step: 0.05 });
     lineFolder.addButton({ title: 'Reset thickness' }).on('click', () => { appState.lineWeight = 1; this.pane.refresh(); });

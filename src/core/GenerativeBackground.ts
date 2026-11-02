@@ -48,7 +48,7 @@ export class GenerativeBackground {
   readonly objectsTarget = new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});
   readonly objectsTexture = this.objectsTarget.texture;
   readonly nearTarget = new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});
-  private readonly bodyPlane = new THREE.Plane(new THREE.Vector3(0,0,1),0);
+  readonly bodyPlane = new THREE.Plane(new THREE.Vector3(0,0,1),0);
   get frontTexture(): THREE.Texture { return this.settings.bodyPlacement==='Inside 3D space'?this.nearTarget.texture:this.objectsTexture; }
   private readonly fillMaterial = new THREE.ShaderMaterial({
     uniforms:{uObjects:{value:this.objectsTexture},uBase:{value:new THREE.Color()}},
@@ -57,7 +57,7 @@ export class GenerativeBackground {
     depthTest:false,depthWrite:false,toneMapped:false,
   });
   private readonly fillQuad = new FullScreenQuad(this.fillMaterial);
-  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', bodyPlacement: 'Behind body', bodyDepth: 0, letterMotion: 'Alphabet Storm', moleculeArrangement: 'Swarm', molecularColors: 'Elements', molecularForm: 'Ball + Stick', paused: false };
+  readonly settings = { style: 'Chromatic Organism', reaction: 'Body + Sound', palette: 'Acid', speed: 1, density: 1, size: 1, sensitivity: 1, base: 'Black', alphabet: 'Mixed', bodyPlacement: 'Behind body', bodyDepth: 0, followBody: true, symbolSize: 1, atmosphere: .35, letterMotion: 'Alphabet Storm', moleculeArrangement: 'Swarm', molecularColors: 'Elements', molecularForm: 'Ball + Stick', paused: false };
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(43, 16 / 9, .1, 100);
   readonly sculpture = new THREE.Group();
@@ -67,6 +67,12 @@ export class GenerativeBackground {
   private last = -1;
   private pulse = 0;
   private pointer = new THREE.Vector2();
+  private baselineShoulders: number | null = null;
+  private followingInside = false;
+  private trackedDepth = 0;
+  private trackedYaw = 0;
+  private trackedPitch = 0;
+  calibrateBodyDepth(): void { this.baselineShoulders=null;this.trackedDepth=0;this.trackedYaw=0;this.trackedPitch=0; }
   constructor() {
     this.camera.position.set(0, 0, 10);
     this.scene.add(this.sculpture, new THREE.HemisphereLight(0xd9eaff, 0x21042a, 2.3));
@@ -83,7 +89,7 @@ export class GenerativeBackground {
     const colors=GENERATIVE_PALETTES[s.palette] ?? GENERATIVE_PALETTES.Acid!;
     const extras: Record<string, number> = { 'Crystal Swarm': 36, 'Ribbon Tide': 24, 'Orbital Cathedral': 18, 'Pulse Totems': 32, 'Molecular Dream': 42, 'Origami Storm': 30, 'Alphabet Storm': 42, 'Letter Orbit': 30, 'Glyph Rain': 54, 'Language Constellation': 36 };
     const moleculeName=HORMONE_STYLES[s.style], style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
-    const count=moleculeName?(s.moleculeArrangement==='Atlas'?1:Math.round(36*s.density)):Math.round((extras[style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
+    const count=s.density<=0?0:moleculeName?(s.moleculeArrangement==='Atlas'?1:Math.round(36*s.density)):Math.round((extras[style] ?? (s.style==='Impossible Architecture'?22:s.style==='Shattered Sun'?48:s.style==='Liquid Satellites'?18:12))*s.density);
     const alphabet=LANGUAGE_STYLES[s.style] ?? s.alphabet;
     const letters = alphabet === 'Mixed' ? Object.values(LETTERS) : [LETTERS[alphabet] ?? LETTERS.English!];
     const cache = new Map<string, THREE.BufferGeometry>();
@@ -136,6 +142,26 @@ export class GenerativeBackground {
       this.pointer.lerp(new THREE.Vector2(wrist?(.5-wrist.x)*2:0,wrist?(.5-wrist.y)*2:0),1-Math.exp(-dt*5));
     }
     this.camera.aspect=aspect;
+    const inside=s.bodyPlacement==='Inside 3D space';
+    if(inside&&!this.followingInside)this.calibrateBodyDepth();
+    this.followingInside=inside;
+    let targetDepth=0,targetYaw=0,targetPitch=0;
+    const left=pose.landmarks[11],right=pose.landmarks[12],hip=pose.landmarks[23];
+    if(inside&&s.followBody&&pose.hasDetection&&left&&right&&left.visibility>.5&&right.visibility>.5){
+      const width=Math.hypot(left.x-right.x,left.y-right.y);
+      if(width>.03){
+        if(this.baselineShoulders===null)this.baselineShoulders=width;
+        targetDepth=THREE.MathUtils.clamp((width/this.baselineShoulders-1)*3,-1.4,1.4);
+        targetYaw=THREE.MathUtils.clamp((left.z-right.z)/width*.4,-.55,.55);
+        if(hip&&hip.visibility>.5)targetPitch=THREE.MathUtils.clamp(((left.z+right.z)*.5-hip.z)*.5,-.25,.25);
+      }
+    }
+    const smooth=1-Math.exp(-dt*4);
+    this.trackedDepth+=(targetDepth-this.trackedDepth)*smooth;
+    this.trackedYaw+=(targetYaw-this.trackedYaw)*smooth;
+    this.trackedPitch+=(targetPitch-this.trackedPitch)*smooth;
+    this.bodyPlane.normal.set(-this.trackedYaw,this.trackedPitch,1).normalize();
+    this.bodyPlane.constant=-(s.bodyDepth+this.trackedDepth)*this.bodyPlane.normal.z;
     const t=this.time,p=this.pulse,n=this.pieces.length;
     const style=LANGUAGE_STYLES[s.style]?s.letterMotion:s.style;
     this.sculpture.scale.setScalar(s.size*(1+p*.1));
@@ -235,7 +261,12 @@ export class GenerativeBackground {
         mesh.scale.setScalar(.6+f*1.9+p*.15);
       }
     }
+    for(const mesh of this.pieces)mesh.scale.multiplyScalar(s.symbolSize);
     this.scene.background=null;
+    if(inside&&s.atmosphere>0){
+      const z=aspect<1?10/aspect:10;
+      this.scene.fog=new THREE.Fog(s.base==='White'?'#ffffff':'#08070e',z+1-s.atmosphere*2,z+12-s.atmosphere*5);
+    }else this.scene.fog=null;
     (this.fillMaterial.uniforms.uBase!.value as THREE.Color).set(s.base==='White'?'#ffffff':'#08070e');
     this.camera.aspect=aspect;this.camera.position.z=aspect<1?10/aspect:10;this.camera.updateProjectionMatrix();
     const height=Math.round(960/Math.max(.3,aspect));if(this.target.height!==height){this.target.setSize(960,height);this.objectsTarget.setSize(960,height);this.nearTarget.setSize(960,height);}
@@ -248,7 +279,6 @@ export class GenerativeBackground {
         renderer.xr.enabled=false;renderer.autoClear=true;renderer.setClearColor(0,0);
         renderer.setRenderTarget(this.objectsTarget);renderer.setScissorTest(false);renderer.render(this.scene,this.camera);
         if(s.bodyPlacement==='Inside 3D space'){
-          this.bodyPlane.constant=-s.bodyDepth;
           renderer.clippingPlanes=[...(clippingPlanes??[]),this.bodyPlane];
           renderer.setRenderTarget(this.nearTarget);renderer.render(this.scene,this.camera);
         }

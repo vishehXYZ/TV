@@ -298,6 +298,7 @@ const renderFrame = (): void => {
   sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, backgroundLayer.generator?.settings.bodyPlacement, backgroundLayer.generator?.settings.bodyDepth, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
+  sceneManager.bodyVolumePass.configure(appState.bodyVolume,poseTracker.state,sceneManager.aspect);
   sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);
   sceneManager.render();
 };

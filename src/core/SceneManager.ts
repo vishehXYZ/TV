@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BodyVolumePass } from './BodyVolumePass';
 import { ObjectLayers } from './ObjectLayers';
 import { glassMediaMaskGLSL, glassMediaUniforms, sharedScopePass } from './GlassMediaMask';
 import { LineWeightPass } from './LineWeightPass';
@@ -23,6 +24,7 @@ export class SceneManager {
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
   readonly objectLayers: ObjectLayers;
+  readonly bodyVolumePass: BodyVolumePass;
   readonly lineWeightPass: LineWeightPass;
   readonly glassVolumePass: GlassVolumePass;
   readonly motionDelayPass: MotionDelayPass;
@@ -77,6 +79,7 @@ export class SceneManager {
       fragmentShader: glassMediaMaskGLSL + 'uniform float uMediaPresent,uFullMedia; uniform sampler2D tDiffuse; uniform float uWhite; uniform float uMonochrome; uniform float uStrongInk; varying vec2 vUv; void main(){vec4 c=texture2D(tDiffuse,vUv); vec3 ink=clamp(c.rgb-vec3(0.001518,0.001518,0.003035),0.0,1.0); float coverage=max(ink.r,max(ink.g,ink.b)); float inkCoverage=clamp(coverage*1.7,0.0,1.0); vec3 strong=mix(vec3(1.0),ink/max(coverage,0.00001)*0.3,inkCoverage); vec3 paper=mix(mix(vec3(1.0-coverage)+ink*0.65,strong,uStrongInk),vec3(1.0-coverage),uMonochrome); float paperWeight=uWhite; if(uMediaPresent>0.5){paperWeight=uFullMedia>0.5 ? 0.0 : uWhite*(glassContains(vUv)?0.0:1.0);} gl_FragColor=vec4(mix(c.rgb,paper,paperWeight),c.a);}',
     });
     this.composer.addPass(this.backdropPass);
+    this.bodyVolumePass=new BodyVolumePass();this.composer.addPass(this.bodyVolumePass);
     this.cleanQuad = new FullScreenQuad(this.backdropPass.material);
     this.artworkScope = sharedScopePass({
       uniforms: { ...this.mediaUniforms, tDiffuse:{value:null}, tCleanMedia:{value:this.cleanMedia.texture}, tEffectMask:{value:this.objectLayers.effectMask.texture}, uLegacyClip:{value:0} },

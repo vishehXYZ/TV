@@ -143,14 +143,22 @@ export class BackgroundControls {
     const baseSelect=genSelect('Base',['Black','White'],'base');
     const bodyPlacementSelect=genSelect('3D / Body',['Behind body','Across body','Inside 3D space'],'bodyPlacement');
     const bodyHint=document.createElement('small');bodyHint.textContent='For your camera image, enable Foreground > Self View. The camera background is removed while Generative is active. Behind body keeps shapes underneath; Across body draws shapes over the image and effects. Inside 3D space surrounds you, with geometry both behind and in front. Body depth moves your position within this space.';generatorPanel.append(bodyHint);
-    const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'sensitivity'|'bodyDepth']> = [];
-    for(const [label,key,min,max,initial] of [['Speed','speed',0,300,100],['Density','density',25,250,100],['Size','size',40,200,100],['Reaction strength','sensitivity',0,300,100],['Body depth','bodyDepth',-300,300,0]] as const) {
+    const followRow=document.createElement('label');followRow.className='opacity-row';
+    const followBody=document.createElement('input');followBody.type='checkbox';followBody.checked=true;
+    followRow.append(followBody,document.createTextNode('Follow body depth'));generatorPanel.append(followRow);
+    followBody.addEventListener('change',()=>{if(background.generator)background.generator.settings.followBody=followBody.checked;});
+    const calibrate=document.createElement('button');calibrate.className='background-button';calibrate.textContent='Center body depth';
+    calibrate.addEventListener('click',()=>background.generator?.calibrateBodyDepth());generatorPanel.append(calibrate);
+    const syncInside=()=>{const show=bodyPlacementSelect.value==='Inside 3D space';followRow.style.display=show?'flex':'none';calibrate.style.display=show?'block':'none';};
+    bodyPlacementSelect.addEventListener('change',syncInside);syncInside();
+    const genSliders: Array<[HTMLInputElement, 'speed'|'density'|'size'|'symbolSize'|'sensitivity'|'bodyDepth'|'atmosphere']> = [];
+    for(const [label,key,min,max,initial] of [['Speed','speed',0,300,100],['Quantity','density',0,250,100],['Individual size','symbolSize',15,300,100],['Scene size','size',40,200,100],['Reaction strength','sensitivity',0,300,100],['Body depth','bodyDepth',-300,300,0],['Depth atmosphere','atmosphere',0,100,35]] as const) {
       const row=document.createElement('label');row.className='opacity-row';row.textContent=label;
       const input=document.createElement('input');input.type='range';input.min=String(min);input.max=String(max);input.value=String(initial);
       const value=document.createElement('span');value.textContent=(initial/100).toFixed(2);
       input.addEventListener('input',()=>{value.textContent=(Number(input.value)/100).toFixed(2);if(background.generator)background.generator.settings[key]=Number(input.value)/100;});
       genSliders.push([input,key]);row.append(input,value);generatorPanel.append(row);
-      if(key==='bodyDepth'){
+      if(key==='bodyDepth'||key==='atmosphere'){
         const syncDepth=()=>{row.style.display=bodyPlacementSelect.value==='Inside 3D space'?'flex':'none';};
         bodyPlacementSelect.addEventListener('change',syncDepth);syncDepth();
       }
@@ -160,7 +168,7 @@ export class BackgroundControls {
     const hint=document.createElement('small');hint.textContent='Body: enable Camera. Sound: start Microphone or Music in Sound. Recorded with the full composition.';generatorPanel.append(hint);
     const genBtn=this.makeButton('Generative',()=>{
       background.setGenerative(); const s=background.generator!.settings;
-      s.bodyPlacement=bodyPlacementSelect.value;s.letterMotion=letterMotionSelect.value;s.moleculeArrangement=arrangementSelect.value;s.molecularColors=moleculeColorsSelect.value;s.molecularForm=moleculeFormSelect.value;
+      s.followBody=followBody.checked;s.bodyPlacement=bodyPlacementSelect.value;s.letterMotion=letterMotionSelect.value;s.moleculeArrangement=arrangementSelect.value;s.molecularColors=moleculeColorsSelect.value;s.molecularForm=moleculeFormSelect.value;
       s.style=styleSelect.value;s.alphabet=alphabetSelect.value;s.reaction=reactionSelect.value;s.palette=paletteSelect.value;s.base=baseSelect.value;
       for(const [input,key] of genSliders)s[key]=Number(input.value)/100;
       pauseGen.textContent='Pause animation';this.setActive(genBtn);generatorPanel.style.display='flex';

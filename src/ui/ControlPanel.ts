@@ -118,6 +118,16 @@ export class ControlPanel {
     bodyFolder.addBinding(appState.bodyFx, 'scale', { min: 0.4, max: 2, step: 0.1 });
     this.modeFolders.push({ folder: bodyFolder, modes: ['bodyFlames', 'bodyRibbons', 'bodyPrism', 'geoPortal', 'geoOrbits', 'geoFracture'] });
 
+    const contourFolder=this.addSectionFolder('Body contours (all modes)','effects');
+    contourFolder.addBinding(appState.bodyContours,'enabled',{label:'Enable body contours'});
+    contourFolder.addBinding(appState.bodyContours,'outer',{label:'Outer silhouette'});
+    contourFolder.addBinding(appState.bodyContours,'limbs',{label:'Arm / leg boundaries'});
+    contourFolder.addBinding(appState.bodyContours,'hands',{label:'Hands / feet'});
+    contourFolder.addBinding(appState.bodyContours,'width',{label:'Contour thickness',min:.5,max:6,step:.25});
+    contourFolder.addBinding(appState.bodyContours,'opacity',{label:'Contour opacity',min:0,max:1,step:.05});
+    contourFolder.addBinding(appState.bodyContours,'usePalette',{label:'Use palette color'});
+    contourFolder.addBinding(appState.bodyContours,'color',{label:'Custom outline color'}).on('change',()=>{appState.bodyContours.usePalette=false;this.pane.refresh();});
+
     const volumeFolder=this.addSectionFolder('3D Body (all modes)','effects');
     volumeFolder.addBinding(appState.bodyVolume,'enabled',{label:'Enable 3D body'});
     volumeFolder.addBinding(appState.bodyVolume,'depth',{label:'Body volume',min:0,max:2,step:.05});

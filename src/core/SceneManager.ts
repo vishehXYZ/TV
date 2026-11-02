@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BodyContourPass } from './BodyContourPass';
 import { BodyVolumePass } from './BodyVolumePass';
 import { ObjectLayers } from './ObjectLayers';
 import { glassMediaMaskGLSL, glassMediaUniforms, sharedScopePass } from './GlassMediaMask';
@@ -24,6 +25,7 @@ export class SceneManager {
   readonly camera: THREE.OrthographicCamera;
   readonly renderer: THREE.WebGLRenderer;
   readonly objectLayers: ObjectLayers;
+  readonly bodyContourPass: BodyContourPass;
   readonly bodyVolumePass: BodyVolumePass;
   readonly lineWeightPass: LineWeightPass;
   readonly glassVolumePass: GlassVolumePass;
@@ -80,6 +82,7 @@ export class SceneManager {
     });
     this.composer.addPass(this.backdropPass);
     this.bodyVolumePass=new BodyVolumePass();this.composer.addPass(this.bodyVolumePass);
+    this.bodyContourPass=new BodyContourPass();this.composer.addPass(this.bodyContourPass);
     this.cleanQuad = new FullScreenQuad(this.backdropPass.material);
     this.artworkScope = sharedScopePass({
       uniforms: { ...this.mediaUniforms, tDiffuse:{value:null}, tCleanMedia:{value:this.cleanMedia.texture}, tEffectMask:{value:this.objectLayers.effectMask.texture}, uLegacyClip:{value:0} },

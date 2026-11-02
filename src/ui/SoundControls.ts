@@ -81,9 +81,7 @@ export class SoundControls {
     this.meter=document.createElement('meter');this.meter.min=0;this.meter.max=1;this.meter.setAttribute('aria-label','Live music signal');this.meter.style.flex='1';
     this.signalText=document.createElement('span');this.signalText.textContent='No audio input';signal.append(this.meter,this.signalText);
     const hint=document.createElement('small');hint.textContent='Load a track with Music, or use Mic for sound in the room. Reaction strength does not change playback volume.';
-    const bandMeters=document.createElement('div');
-    for(const key of ['bass','mid','treble'] as const){const line=document.createElement('label');line.className='opacity-row';line.textContent=key;const meter=document.createElement('meter');meter.min=0;meter.max=2;meter.dataset.audioBand=key;line.append(meter);bandMeters.append(line);}
-    this.container.append(label, row, this.transportRow,this.createReactionControls(),signal,bandMeters,hint);
+    this.container.append(label, row, this.transportRow,this.createReactionControls(),signal,hint);
   }
 
   createReactionControls():HTMLElement{
@@ -99,30 +97,10 @@ export class SoundControls {
     // Keep the shared controls synchronized when switching between menu sections.
     box.addEventListener('pointerenter',()=>{enabled.checked=this.audioReactor.reactionEnabled;gain.value=String(this.audioReactor.sensitivity*100);value.textContent=this.audioReactor.sensitivity.toFixed(2);});
     row.append(gain,value);const hint=document.createElement('small');hint.textContent='Choose Music or Mic in Sound to provide audio. None hides the body; background and music continue.';
-    const onlyLabel=document.createElement('label');onlyLabel.className='opacity-row';
-    const only=document.createElement('input');only.type='checkbox';only.checked=this.audioReactor.musicOnly;
-    only.addEventListener('change',()=>{this.audioReactor.musicOnly=only.checked;});
-    onlyLabel.append(only,document.createTextNode('Music only — ignore body / camera'));
-    const focus=document.createElement('select');focus.setAttribute('aria-label','Music frequency focus');
-    for(const name of ['Full mix','Bass / low tones','Mids / guitar range','Highs / detail','Beats / percussion','Custom']){const option=document.createElement('option');option.value=option.textContent=name;focus.append(option);}
-    focus.value=this.audioReactor.focus;
-    const sliders:HTMLInputElement[]=[];
-    const bands=document.createElement('div');
-    for(const [key,title] of [['bass','Bass'],['mid','Mids / guitar range'],['treble','Highs / texture'],['beats','Beat accents']] as const){
-      const line=document.createElement('label');line.className='opacity-row';line.textContent=title;
-      const input=document.createElement('input');input.type='range';input.min='0';input.max='300';input.value=String(this.audioReactor.weights[key]*100);input.setAttribute('aria-label',title);
-      input.addEventListener('input',()=>{this.audioReactor.weights[key]=Number(input.value)/100;this.audioReactor.focus='Custom';focus.value='Custom';});
-      input.dataset.band=key;sliders.push(input);line.append(input);bands.append(line);
-    }
-    const sync=()=>{only.checked=this.audioReactor.musicOnly;focus.value=this.audioReactor.focus;for(const input of sliders)input.value=String(this.audioReactor.weights[input.dataset.band as keyof typeof this.audioReactor.weights]*100);};
-    focus.addEventListener('change',()=>{if(focus.value!=='Custom')this.audioReactor.setFocus(focus.value);else this.audioReactor.focus='Custom';sync();});
-    box.addEventListener('pointerenter',sync);
-    const note=document.createElement('small');note.textContent='Frequency focus is not instrument separation: guitar, vocals and drums can overlap. Music only keeps the camera out of the visual modes; no fake body is generated.';
-    box.append(label,row,onlyLabel,focus,bands,hint,note);return box;
+    box.append(label,row,hint);return box;
   }
 
   refreshSignal():void{
-    this.container.querySelectorAll<HTMLMeterElement>('meter[data-audio-band]').forEach(meter=>{meter.value=this.audioReactor[meter.dataset.audioBand as 'bass'|'mid'|'treble'];});
     this.meter.value=Math.min(1,this.audioReactor.level);
     this.signalText.textContent=!this.audioReactor.isActive?'No audio input':this.audioReactor.isPaused?'Music paused':this.audioReactor.contextState!=='running'?'Audio suspended':this.audioReactor.source==='music'?'Music signal':'Mic signal';
   }

@@ -15,13 +15,25 @@ export class AudioReactor {
   private readonly envelope=new AudioEnvelope();
   sensitivity=1.4;
   reactionEnabled=true;
+  musicOnly=false;
+  focus='Full mix';
+  weights={bass:1,mid:1.4,treble:1,beats:.65};
+  setFocus(focus:string):void{
+    this.focus=focus;
+    this.weights=focus==='Bass / low tones'?{bass:2,mid:0,treble:0,beats:.3}:focus==='Mids / guitar range'?{bass:0,mid:2.5,treble:.7,beats:0}:focus==='Highs / detail'?{bass:0,mid:.2,treble:2.5,beats:0}:focus==='Beats / percussion'?{bass:1,mid:.2,treble:.5,beats:2}:{bass:1,mid:1.4,treble:1,beats:.65};
+  }
   get isActive():boolean{return this.analyser!==null;}
   get source():'mic'|'music'|'none'{return !this.isActive?'none':this.audioEl?'music':'mic';}
   private get signalReady():boolean{return this.isActive&&this.audioContext?.state==='running'&&!this.audioEl?.paused&&!this.audioEl?.ended;}
   get audioStream():MediaStream|null{return this.destinationNode?.stream??null;}
   get level():number{if(!this.signalReady)return 0;return Math.min(1.5,Math.max(this.envelope.level,this.envelope.pulse*.7)*this.sensitivity);}
   /** Motion-energy scale is smaller than the normalized audio meter, avoiding permanently saturated modes. */
-  get motionEnergy():number{if(!this.signalReady||!this.reactionEnabled)return 0;return Math.min(.6,(this.envelope.level*.1+this.envelope.pulse*.14+this.envelope.kick*.1)*this.sensitivity);}
+  get motionEnergy():number{
+    if(!this.signalReady||!this.reactionEnabled)return 0;
+    const e=this.envelope,w=this.weights;
+    return Math.min(.6,(e.bass*w.bass*.10+e.mid*w.mid*.14+e.treble*w.treble*.12+(e.pulse+e.kick)*w.beats*.07)*this.sensitivity);
+  }
+  get visualLevel():number{return Math.min(1.5,this.motionEnergy*4);}
   get bass():number{return this.signalReady?this.envelope.bass*this.sensitivity:0;}
   get mid():number{return this.signalReady?this.envelope.mid*this.sensitivity:0;}
   get treble():number{return this.signalReady?this.envelope.treble*this.sensitivity:0;}

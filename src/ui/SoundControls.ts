@@ -77,15 +77,27 @@ export class SoundControls {
     this.transportRow.style.display = 'none';
     this.transportRow.append(this.back10Btn, this.playPauseBtn, this.fwd10Btn);
 
-    const reaction=document.createElement('label');reaction.className='opacity-row';reaction.textContent='Music reaction';
-    const strength=document.createElement('input');strength.type='range';strength.min='0';strength.max='300';strength.value=String(audioReactor.sensitivity*100);
-    const amount=document.createElement('span');amount.textContent=audioReactor.sensitivity.toFixed(2);
-    strength.addEventListener('input',()=>{audioReactor.sensitivity=Number(strength.value)/100;amount.textContent=audioReactor.sensitivity.toFixed(2);});reaction.append(strength,amount);
     const signal=document.createElement('div');signal.className='opacity-row';
     this.meter=document.createElement('meter');this.meter.min=0;this.meter.max=1;this.meter.setAttribute('aria-label','Live music signal');this.meter.style.flex='1';
     this.signalText=document.createElement('span');this.signalText.textContent='No audio input';signal.append(this.meter,this.signalText);
     const hint=document.createElement('small');hint.textContent='Load a track with Music, or use Mic for sound in the room. Reaction strength does not change playback volume.';
-    this.container.append(label, row, this.transportRow,reaction,signal,hint);
+    this.container.append(label, row, this.transportRow,this.createReactionControls(),signal,hint);
+  }
+
+  createReactionControls():HTMLElement{
+    const box=document.createElement('div');box.className='sound-controls';
+    const label=document.createElement('label');label.className='opacity-row';
+    const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=this.audioReactor.reactionEnabled;
+    enabled.addEventListener('change',()=>{this.audioReactor.reactionEnabled=enabled.checked;});
+    label.append(enabled,document.createTextNode('React to music — all modes'));
+    const row=document.createElement('label');row.className='opacity-row';row.textContent='Reaction strength';
+    const gain=document.createElement('input');gain.type='range';gain.min='0';gain.max='300';gain.value=String(this.audioReactor.sensitivity*100);
+    const value=document.createElement('span');value.textContent=this.audioReactor.sensitivity.toFixed(2);
+    gain.addEventListener('input',()=>{this.audioReactor.sensitivity=Number(gain.value)/100;value.textContent=this.audioReactor.sensitivity.toFixed(2);});
+    // Keep the shared controls synchronized when switching between menu sections.
+    box.addEventListener('pointerenter',()=>{enabled.checked=this.audioReactor.reactionEnabled;gain.value=String(this.audioReactor.sensitivity*100);value.textContent=this.audioReactor.sensitivity.toFixed(2);});
+    row.append(gain,value);const hint=document.createElement('small');hint.textContent='Choose Music or Mic in Sound to provide audio. None hides the body; background and music continue.';
+    box.append(label,row,hint);return box;
   }
 
   refreshSignal():void{

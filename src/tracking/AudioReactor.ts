@@ -14,13 +14,14 @@ export class AudioReactor {
   private lastUpdateAt:number|null=null;
   private readonly envelope=new AudioEnvelope();
   sensitivity=1.4;
+  reactionEnabled=true;
   get isActive():boolean{return this.analyser!==null;}
   get source():'mic'|'music'|'none'{return !this.isActive?'none':this.audioEl?'music':'mic';}
   private get signalReady():boolean{return this.isActive&&this.audioContext?.state==='running'&&!this.audioEl?.paused&&!this.audioEl?.ended;}
   get audioStream():MediaStream|null{return this.destinationNode?.stream??null;}
   get level():number{if(!this.signalReady)return 0;return Math.min(1.5,Math.max(this.envelope.level,this.envelope.pulse*.7)*this.sensitivity);}
   /** Motion-energy scale is smaller than the normalized audio meter, avoiding permanently saturated modes. */
-  get motionEnergy():number{if(!this.signalReady)return 0;return Math.min(.6,(this.envelope.level*.1+this.envelope.pulse*.14+this.envelope.kick*.1)*this.sensitivity);}
+  get motionEnergy():number{if(!this.signalReady||!this.reactionEnabled)return 0;return Math.min(.6,(this.envelope.level*.1+this.envelope.pulse*.14+this.envelope.kick*.1)*this.sensitivity);}
   get bass():number{return this.signalReady?this.envelope.bass*this.sensitivity:0;}
   get mid():number{return this.signalReady?this.envelope.mid*this.sensitivity:0;}
   get treble():number{return this.signalReady?this.envelope.treble*this.sensitivity:0;}

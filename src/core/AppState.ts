@@ -42,6 +42,7 @@ export const PALETTE_PRESETS: PalettePreset[] = [
 ];
 
 export type VisualMode =
+  | 'none'
   | 'fill'
   | 'dance'
   | 'nature'

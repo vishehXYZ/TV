@@ -173,6 +173,7 @@ selfViewToggleButton.addEventListener('click', () => {
 appRoot.appendChild(selfViewToggleButton);
 
 const soundControls = new SoundControls(audioReactor);
+modeSwitcher.container.append(soundControls.createReactionControls());
 soundControls.container.classList.add('control-bar-section');
 controlBar.appendChild(soundControls.container);
 const motionButton = document.createElement('button'); motionButton.className = 'background-button'; motionButton.textContent='Motion Sound Off';
@@ -201,8 +202,8 @@ const renderFrame = (): void => {
   if(audioReactor.isActive)audioReactor.update();
   syncVisualPose(visualPose,poseTracker.state,audioReactor.isActive?audioReactor.motionEnergy:0);
   soundControls.refreshSignal();
-  backgroundLayer.updateGenerative(lastElapsed, poseTracker.state, backgroundBodyEnergy, audioReactor.isActive ? Math.max(audioReactor.level, audioReactor.kick) : 0);
-  const audioBands = audioReactor.isActive
+  backgroundLayer.updateGenerative(lastElapsed, poseTracker.state, backgroundBodyEnergy, audioReactor.isActive && audioReactor.reactionEnabled ? Math.max(audioReactor.level, audioReactor.kick) : 0);
+  const audioBands = audioReactor.isActive && audioReactor.reactionEnabled
     ? { kick: audioReactor.kick, mid: audioReactor.mid, treble: audioReactor.treble }
     : { kick: 0, mid: 0, treble: 0 };
   switch (appState.mode) {
@@ -278,12 +279,16 @@ const renderFrame = (): void => {
       revealMode.update(visualTracker, appState, lastElapsed, lastDt);
       break;
   }
+  if(appState.mode==='none'){
+    if(foregroundLayer.mode==='camera') foregroundLayer.mesh.visible=false;
+    if(backgroundLayer.mode==='camera') backgroundLayer.mesh.visible=false;
+  }
   foregroundLayer.setBodyIsolation(poseTracker.state,backgroundLayer.mode==='generative');
   sceneManager.motionDelayPass.configure(appState.motionDelay, JSON.stringify([appState.mode, appState.palette.map(c => c.getHexString()), appState.chaos.appearance, appState.chaos.coverage, backgroundLayer.mode, backgroundLayer.solidColor, backgroundLayer.placement, backgroundLayer.generator?.settings.bodyPlacement, backgroundLayer.generator?.settings.bodyDepth, foregroundLayer.mode, foregroundLayer.placement, appState.glassVolume.enabled]));
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
-  sceneManager.bodyVolumePass.configure(appState.bodyVolume,poseTracker.state,sceneManager.aspect);
-  sceneManager.bodyContourPass.configure(appState.bodyContours,poseTracker.state,sceneManager.aspect,appState.palette[3]!,video);
+  sceneManager.bodyVolumePass.configure({...appState.bodyVolume,enabled:appState.bodyVolume.enabled && appState.mode!=='none'},poseTracker.state,sceneManager.aspect);
+  sceneManager.bodyContourPass.configure({...appState.bodyContours,enabled:appState.bodyContours.enabled && appState.mode!=='none'},poseTracker.state,sceneManager.aspect,appState.palette[3]!,video);
   sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);
   sceneManager.render();
 };

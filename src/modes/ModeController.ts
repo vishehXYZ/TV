@@ -27,7 +27,7 @@ interface Visible {
 /** Switches visibility across the visual modes based on AppState.mode. */
 export class ModeController {
   private appState: AppState;
-  private modes: Record<AppState['mode'], Visible>;
+  private modes: Record<Exclude<AppState['mode'], 'none'>, Visible>;
   private lastApplied: string | null = null;
 
   constructor(

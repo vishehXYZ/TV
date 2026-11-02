@@ -18,6 +18,7 @@ interface ModeCategory {
  * behind repeated clicks on the same button.
  */
 const CATEGORIES: ModeCategory[] = [
+  {label:'None',styles:[{id:'none',styleLabel:'None'}]},
   {label:'Geometry', styles:[{id:'geoPortal',styleLabel:'Twisted Portal'},{id:'geoOrbits',styleLabel:'Polygon Orbits'},{id:'geoFracture',styleLabel:'Fractured Grid'}]},
   {label:'Body FX', styles:[{id:'bodyFlames',styleLabel:'Flames'},{id:'bodyRibbons',styleLabel:'Neon Ribbons'},{id:'bodyPrism',styleLabel:'Prism Shards'}]},
   {label:'Vertical', styles:[{id:'verticalLines',styleLabel:'Sharp Lines'}]},

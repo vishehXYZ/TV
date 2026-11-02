@@ -299,7 +299,7 @@ const renderFrame = (): void => {
   sceneManager.glassVolumePass.configure(appState.glassVolume, sceneManager.aspect, backgroundLayer.solidColor === 'white', appState.palette[3]!);
   sceneManager.lineWeightPass.configure(appState.lineWeight);
   sceneManager.bodyVolumePass.configure(appState.bodyVolume,poseTracker.state,sceneManager.aspect);
-  sceneManager.bodyContourPass.configure(appState.bodyContours,poseTracker.state,sceneManager.aspect,appState.palette[3]!);
+  sceneManager.bodyContourPass.configure(appState.bodyContours,poseTracker.state,sceneManager.aspect,appState.palette[3]!,video);
   sceneManager.setMediaScopes(backgroundLayer.placement !== 'Full background', backgroundLayer.mode !== 'none' && backgroundLayer.mesh.visible, foregroundLayer.placement !== 'Full background', foregroundLayer.mode !== 'none' && foregroundLayer.mesh.visible, appState.glassVolume.enabled);
   sceneManager.render();
 };

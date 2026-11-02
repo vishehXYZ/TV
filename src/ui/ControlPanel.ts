@@ -123,6 +123,7 @@ export class ControlPanel {
     contourFolder.addBinding(appState.bodyContours,'outer',{label:'Outer silhouette'});
     contourFolder.addBinding(appState.bodyContours,'limbs',{label:'Arm / leg boundaries'});
     contourFolder.addBinding(appState.bodyContours,'hands',{label:'Hands / feet'});
+    contourFolder.addBinding(appState.bodyContours,'sensitivity',{label:'Internal edge detail',min:0,max:1,step:.05});
     contourFolder.addBinding(appState.bodyContours,'width',{label:'Contour thickness',min:.5,max:6,step:.25});
     contourFolder.addBinding(appState.bodyContours,'opacity',{label:'Contour opacity',min:0,max:1,step:.05});
     contourFolder.addBinding(appState.bodyContours,'usePalette',{label:'Use palette color'});

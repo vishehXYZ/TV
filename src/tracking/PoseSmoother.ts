@@ -32,7 +32,8 @@ export class PoseSmoother {
       const prev = this.prevSmoothed?.[i];
 
       if (lowConfidence && prev) {
-        smoothed[i] = prev;
+        // Keep the last position stable, but never pretend an occluded joint is still visible.
+        smoothed[i] = { ...prev, visibility: raw.visibility };
         continue;
       }
 

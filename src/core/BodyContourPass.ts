@@ -5,20 +5,22 @@ import type { Landmark, PoseState } from '../tracking/PoseState';
 
 export interface BodyContourSettings {
   enabled: boolean; outer: boolean; limbs: boolean; hands: boolean;
-  width: number; opacity: number; usePalette: boolean; color: string;
+  width: number; opacity: number; sensitivity: number; usePalette: boolean; color: string;
 }
-/** The silhouette alone cannot separate a forearm from the torso. Add pose-based limb boundaries. */
+/** Silhouette plus real camera-image edges near tracked limbs. Pose only defines search regions. */
 export class BodyContourPass extends ShaderPass {
   private readonly mask = new SegmentationMaskTexture();
+  private camera: THREE.VideoTexture | null = null;
+  private video: HTMLVideoElement | null = null;
   constructor(){
     super(new THREE.ShaderMaterial({
       depthTest:false,depthWrite:false,toneMapped:false,
-      uniforms:{tDiffuse:{value:null},uMask:{value:null},uHasMask:{value:0},uRepeat:{value:new THREE.Vector2(-1,1)},uOffset:{value:new THREE.Vector2(1,0)},uAspect:{value:1},uResolution:{value:new THREE.Vector2(1280,720)},uWidth:{value:2},uOpacity:{value:.9},uOuter:{value:1},uLimbs:{value:1},uHands:{value:1},uColor:{value:new THREE.Color()},uA:{value:Array.from({length:12},()=>new THREE.Vector4())},uB:{value:Array.from({length:12},()=>new THREE.Vector4())}},
+      uniforms:{tDiffuse:{value:null},uCamera:{value:null},uHasCamera:{value:0},uCameraResolution:{value:new THREE.Vector2(1280,720)},uThreshold:{value:.11},uMask:{value:null},uHasMask:{value:0},uRepeat:{value:new THREE.Vector2(-1,1)},uOffset:{value:new THREE.Vector2(1,0)},uAspect:{value:1},uResolution:{value:new THREE.Vector2(1280,720)},uWidth:{value:2},uOpacity:{value:.9},uOuter:{value:1},uLimbs:{value:1},uHands:{value:1},uColor:{value:new THREE.Color()},uA:{value:Array.from({length:12},()=>new THREE.Vector4())},uB:{value:Array.from({length:12},()=>new THREE.Vector4())}},
       vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`
-        uniform sampler2D tDiffuse,uMask;
-        uniform vec2 uRepeat,uOffset,uResolution;
-        uniform float uAspect,uWidth,uOpacity,uHasMask,uOuter,uLimbs,uHands;
+        uniform sampler2D tDiffuse,uMask,uCamera;
+        uniform vec2 uRepeat,uOffset,uResolution,uCameraResolution;
+        uniform float uAspect,uWidth,uOpacity,uHasMask,uHasCamera,uThreshold,uOuter,uLimbs,uHands;
         uniform vec3 uColor;uniform vec4 uA[12],uB[12];varying vec2 vUv;
         float maskAt(vec2 p){
           vec2 uv=p*uRepeat+uOffset;
@@ -42,24 +44,41 @@ export class BodyContourPass extends ShaderPass {
           float t=clamp(dot(p-a.xy,v)/max(dot(v,v),.000001),0.,1.);
           return length(p-mix(a.xy,b.xy,t))-mix(a.z,b.z,t);
         }
-        float limbEdge(float radius){
-          vec2 p=(vUv-.5)*vec2(2.*uAspect,2.);
-          float result=0.,w=radius/uResolution.y,aa=1.3/uResolution.y;
-          if(uLimbs>.5) for(int limb=0;limb<4;limb++){
-            int i=limb*2;
-            float d=min(capsule(p,uA[i],uB[i]),capsule(p,uA[i+1],uB[i+1]));
-            result=max(result,1.-smoothstep(w,w+aa,abs(d)));
+        float regionAt(vec2 uv){
+          vec2 p=(uv-.5)*vec2(2.*uAspect,2.);
+          float region=0.;
+          for(int i=0;i<12;i++){
+            if((i<8&&uLimbs>.5)||(i>=8&&uHands>.5)){
+              float d=capsule(p,uA[i],uB[i]);
+              region=max(region,1.-smoothstep(.02,.08,d));
+            }
           }
-          if(uHands>.5) for(int i=8;i<12;i++){
-            float d=capsule(p,uA[i],uB[i]);
-            result=max(result,1.-smoothstep(w,w+aa,abs(d)));
-          }
-          return result;
+          return region;
+        }
+        float cameraEdge(vec2 uv){
+          vec2 source=uv*uRepeat+uOffset;
+          vec2 e=vec2(1.5)/uCameraResolution;
+          vec3 dx=texture2D(uCamera,source+vec2(e.x,0.)).rgb-texture2D(uCamera,source-vec2(e.x,0.)).rgb;
+          vec3 dy=texture2D(uCamera,source+vec2(0.,e.y)).rgb-texture2D(uCamera,source-vec2(0.,e.y)).rgb;
+          float gradient=sqrt(dot(dx,dx)+dot(dy,dy))*.57735;
+          return smoothstep(uThreshold,uThreshold*2.,gradient);
+        }
+        float internalEdge(float radius){
+          if(uHasCamera<.5||uHasMask<.5)return 0.;
+          float region=regionAt(vUv)*smoothstep(.45,.65,maskAt(vUv));
+          if(region<.001)return 0.;
+          float edge=cameraEdge(vUv);
+          vec2 pixel=vec2(radius*.5)/uResolution;
+          edge=max(edge,cameraEdge(vUv+vec2(pixel.x,0.)));
+          edge=max(edge,cameraEdge(vUv-vec2(pixel.x,0.)));
+          edge=max(edge,cameraEdge(vUv+vec2(0.,pixel.y)));
+          edge=max(edge,cameraEdge(vUv-vec2(0.,pixel.y)));
+          return edge*region;
         }
         void main(){
           vec4 source=texture2D(tDiffuse,vUv);
-          float core=max(silhouette(uWidth*.5),limbEdge(uWidth));
-          float halo=max(silhouette(uWidth*.5+1.5),limbEdge(uWidth+2.5));
+          float core=max(silhouette(uWidth*.5),internalEdge(uWidth));
+          float halo=max(silhouette(uWidth*.5+1.5),internalEdge(uWidth+2.5));
           vec3 contrast=dot(uColor,vec3(.2126,.7152,.0722))>.4?vec3(.025):vec3(.95);
           vec3 c=mix(source.rgb,contrast,halo*uOpacity*.65);
           c=mix(c,uColor,core*uOpacity);
@@ -69,11 +88,16 @@ export class BodyContourPass extends ShaderPass {
     this.enabled=false;
   }
   override setSize(width:number,height:number):void{(this.uniforms.uResolution!.value as THREE.Vector2).set(width,height);}
-  configure(settings:BodyContourSettings,pose:PoseState,aspect:number,paletteColor:THREE.Color):void{
+  configure(settings:BodyContourSettings,pose:PoseState,aspect:number,paletteColor:THREE.Color,video?:HTMLVideoElement):void{
     this.enabled=settings.enabled&&pose.hasDetection&&settings.opacity>0;
-    if(!this.enabled)return;
+    if(!this.enabled){this.uniforms.uHasCamera!.value=0;return;}
     const texture=this.mask.update(pose);this.uniforms.uMask!.value=texture;this.uniforms.uHasMask!.value=texture?1:0;
-    const sourceAspect=pose.segmentationMask?this.mask.width/this.mask.height:aspect;
+    const ready=Boolean(video&&video.readyState>=2&&video.videoWidth>0&&!video.paused&&!video.ended);
+    if(ready&&video!==this.video){this.camera?.dispose();this.video=video!;this.camera=new THREE.VideoTexture(video!);this.camera.colorSpace=THREE.SRGBColorSpace;}
+    this.uniforms.uCamera!.value=ready?this.camera:null;this.uniforms.uHasCamera!.value=ready?1:0;
+    if(ready)(this.uniforms.uCameraResolution!.value as THREE.Vector2).set(video!.videoWidth,video!.videoHeight);
+    this.uniforms.uThreshold!.value=THREE.MathUtils.lerp(.22,.025,THREE.MathUtils.clamp(settings.sensitivity,0,1));
+    const sourceAspect=ready?video!.videoWidth/video!.videoHeight:pose.segmentationMask?this.mask.width/this.mask.height:aspect;
     const rx=sourceAspect>aspect?aspect/sourceAspect:1,ry=sourceAspect>aspect?1:sourceAspect/aspect;
     (this.uniforms.uRepeat!.value as THREE.Vector2).set(-rx,ry);
     (this.uniforms.uOffset!.value as THREE.Vector2).set((1+rx)/2,(1-ry)/2);
@@ -93,5 +117,5 @@ export class BodyContourPass extends ShaderPass {
       const p=stage(start),q=stage(end);aa[i]!.set(p.x,p.y,shoulder*ra!,1);bb[i]!.set(q.x,q.y,shoulder*rb!,1);
     }
   }
-  override dispose():void{this.mask.dispose();super.dispose();}
+  override dispose():void{this.mask.dispose();this.camera?.dispose();super.dispose();}
 }
